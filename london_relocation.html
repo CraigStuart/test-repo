@@ -1,0 +1,1249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>London Relocation Intelligence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+:root {
+  --bg: #F8F6F1;
+  --navy: #1A2744;
+  --gold: #C9A84C;
+  --sage: #7B9E87;
+  --amber-col: #D4933A;
+  --terra: #C4614A;
+  --text: #2C2C2C;
+  --muted: #6B6B6B;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+h1, h2, h3, h4, .playfair { font-family: 'Playfair Display', serif; }
+
+/* HEADER */
+header {
+  background: var(--navy);
+  color: white;
+  padding: 28px 32px 24px;
+  border-bottom: 3px solid var(--gold);
+}
+header h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: white;
+}
+header .subtitle {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.9rem;
+  color: rgba(255,255,255,0.65);
+  margin-top: 4px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* MAIN LAYOUT */
+main { max-width: 1400px; margin: 0 auto; padding: 0 20px 40px; }
+
+/* CONTROLS */
+.controls-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin: 24px 0;
+}
+.panel {
+  background: white;
+  border-radius: 12px;
+  padding: 20px 24px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+.panel h3 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--navy);
+  margin-bottom: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* WEIGHT SLIDERS */
+.weight-bars {
+  display: flex;
+  gap: 3px;
+  height: 28px;
+  margin-bottom: 14px;
+  border-radius: 4px;
+  overflow: hidden;
+}
+.weight-bar-seg {
+  transition: width 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: white;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.weight-bar-seg.commute { background: var(--navy); }
+.weight-bar-seg.garden { background: var(--sage); }
+.weight-bar-seg.bike { background: var(--amber-col); }
+.weight-bar-seg.space { background: var(--gold); }
+.weight-bar-seg.rent { background: var(--terra); }
+
+.slider-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.slider-row label {
+  font-size: 0.82rem;
+  font-weight: 500;
+  width: 72px;
+  flex-shrink: 0;
+  color: var(--text);
+}
+.slider-row input[type=range] {
+  flex: 1;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  background: #e0ddd6;
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+.slider-row input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--navy);
+  cursor: pointer;
+  border: 2px solid white;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+}
+.slider-row input[type=range]::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--navy);
+  cursor: pointer;
+  border: 2px solid white;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+}
+.slider-val {
+  font-size: 0.8rem;
+  font-weight: 600;
+  width: 34px;
+  text-align: right;
+  color: var(--navy);
+}
+
+/* FILTERS */
+.filters-panel { display: flex; flex-direction: column; gap: 8px; }
+details.filter-group {
+  background: #faf9f6;
+  border: 1px solid #ece9e1;
+  border-radius: 8px;
+  overflow: hidden;
+}
+details.filter-group summary {
+  padding: 10px 14px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--navy);
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+details.filter-group summary::-webkit-details-marker { display: none; }
+details.filter-group summary::after {
+  content: '›';
+  font-size: 1.1rem;
+  transition: transform 0.2s;
+  color: var(--muted);
+}
+details.filter-group[open] summary::after {
+  transform: rotate(90deg);
+}
+.filter-body {
+  padding: 10px 14px 14px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 12px;
+}
+.filter-item {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.filter-item label {
+  font-size: 0.75rem;
+  color: var(--muted);
+  font-weight: 500;
+}
+.filter-item select {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.8rem;
+  padding: 5px 8px;
+  border: 1px solid #ddd9d0;
+  border-radius: 5px;
+  background: white;
+  color: var(--text);
+  cursor: pointer;
+  outline: none;
+}
+.filter-item select:focus { border-color: var(--navy); }
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  grid-column: span 2;
+}
+.checkbox-row label {
+  font-size: 0.8rem;
+  color: var(--text);
+  font-weight: 500;
+  cursor: pointer;
+}
+.checkbox-row input[type=checkbox] {
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+  accent-color: var(--navy);
+}
+.rent-slider-row { grid-column: span 2; }
+.rent-slider-row input[type=range] {
+  width: 100%;
+  margin-top: 4px;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  background: #e0ddd6;
+  border-radius: 2px;
+  cursor: pointer;
+}
+.rent-slider-row input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: var(--terra);
+  cursor: pointer;
+  border: 2px solid white;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+.rent-slider-row input[type=range]::-moz-range-thumb {
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: var(--terra);
+  cursor: pointer;
+  border: 2px solid white;
+}
+
+/* STATS BAR */
+.stats-bar {
+  background: var(--navy);
+  color: white;
+  padding: 10px 20px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  font-size: 0.87rem;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.stats-bar strong { color: var(--gold); }
+
+/* WRITE-UP PANEL */
+.writeup-panel {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+  overflow: hidden;
+  max-height: 0;
+  transition: max-height 0.4s ease;
+  margin-bottom: 16px;
+}
+.writeup-panel.open { max-height: 600px; }
+.writeup-inner {
+  padding: 24px 28px;
+  overflow-y: auto;
+  max-height: 600px;
+}
+.writeup-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.writeup-title {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--navy);
+  line-height: 1.2;
+}
+.score-pill {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: white;
+  white-space: nowrap;
+  align-self: center;
+}
+.status-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  align-self: center;
+  border: 1.5px solid currentColor;
+}
+.status-badge.Benchmark { color: var(--gold); }
+.status-badge.Contender { color: var(--sage); }
+.status-badge.Compromise { color: var(--muted); }
+
+.writeup-meta {
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin-bottom: 14px;
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.writeup-meta span { display: flex; align-items: center; gap: 4px; }
+
+.writeup-commute {
+  background: #f4f2ec;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-size: 0.84rem;
+  margin-bottom: 12px;
+  line-height: 1.8;
+}
+.writeup-commute .ok { color: var(--sage); font-weight: 700; }
+.writeup-commute .no { color: var(--terra); font-weight: 700; }
+
+.writeup-strike {
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin-bottom: 14px;
+  padding: 8px 12px;
+  background: #fef9f0;
+  border-left: 3px solid var(--gold);
+  border-radius: 0 6px 6px 0;
+}
+
+.facts-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.fact-card {
+  background: #f8f6f1;
+  border-radius: 8px;
+  padding: 10px 12px;
+  text-align: center;
+}
+.fact-card .fact-val {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--navy);
+}
+.fact-card .fact-lbl {
+  font-size: 0.7rem;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.demographics-row {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+  font-size: 0.82rem;
+}
+.demo-chip {
+  background: #eeeae0;
+  padding: 4px 10px;
+  border-radius: 20px;
+  color: var(--text);
+}
+
+.writeup-text {
+  font-size: 0.88rem;
+  line-height: 1.75;
+  color: var(--text);
+  margin-bottom: 10px;
+}
+.quick-verdict {
+  font-size: 0.85rem;
+  color: var(--muted);
+  font-style: italic;
+  border-top: 1px solid #ece9e1;
+  padding-top: 10px;
+}
+
+/* MAP */
+.map-container {
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+  margin-bottom: 16px;
+}
+#map { height: 420px; width: 100%; }
+
+/* TABLE */
+.table-container {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  overflow: hidden;
+}
+.table-scroll { overflow-x: auto; }
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+thead {
+  background: var(--navy);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+thead th {
+  padding: 11px 10px;
+  text-align: left;
+  color: white;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+thead th:hover { background: rgba(255,255,255,0.1); }
+thead th.sort-active { color: var(--gold); }
+tbody tr {
+  border-bottom: 1px solid #f0ede5;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+tbody tr:hover { background: #f8f6f1; }
+tbody tr.selected { background: #edf3ef; }
+tbody tr.row-benchmark { border-left: 4px solid var(--gold); }
+tbody tr.row-contender { border-left: 2px solid var(--sage); }
+tbody td {
+  padding: 9px 10px;
+  color: var(--text);
+  white-space: nowrap;
+}
+.rank-cell {
+  font-weight: 700;
+  color: var(--muted);
+  font-size: 0.75rem;
+  width: 32px;
+}
+.ok-tick { color: var(--sage); font-weight: 700; }
+.no-tick { color: var(--terra); font-weight: 600; }
+
+@media (max-width: 768px) {
+  header { padding: 18px 16px; }
+  header h1 { font-size: 1.4rem; }
+  main { padding: 0 12px 30px; }
+  .controls-grid { grid-template-columns: 1fr; gap: 14px; }
+  .filter-body { grid-template-columns: 1fr; }
+  .checkbox-row { grid-column: span 1; }
+  .facts-grid { grid-template-columns: repeat(2, 1fr); }
+  #map { height: 300px; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>London Relocation Intelligence</h1>
+  <div class="subtitle">65 areas &middot; dual commute &middot; May 2026</div>
+</header>
+
+<main>
+  <div class="controls-grid">
+    <!-- LEFT: Weight sliders -->
+    <div class="panel">
+      <h3>Score Weights</h3>
+      <div class="weight-bars" id="weightBars">
+        <div class="weight-bar-seg commute" id="wb-commute"></div>
+        <div class="weight-bar-seg garden" id="wb-garden"></div>
+        <div class="weight-bar-seg bike" id="wb-bike"></div>
+        <div class="weight-bar-seg space" id="wb-space"></div>
+        <div class="weight-bar-seg rent" id="wb-rent"></div>
+      </div>
+      <div class="slider-row">
+        <label>Commute</label>
+        <input type="range" id="sl-commute" min="0" max="100" value="35">
+        <span class="slider-val" id="sv-commute">35%</span>
+      </div>
+      <div class="slider-row">
+        <label>Garden</label>
+        <input type="range" id="sl-garden" min="0" max="100" value="20">
+        <span class="slider-val" id="sv-garden">20%</span>
+      </div>
+      <div class="slider-row">
+        <label>Bike</label>
+        <input type="range" id="sl-bike" min="0" max="100" value="15">
+        <span class="slider-val" id="sv-bike">15%</span>
+      </div>
+      <div class="slider-row">
+        <label>Space</label>
+        <input type="range" id="sl-space" min="0" max="100" value="15">
+        <span class="slider-val" id="sv-space">15%</span>
+      </div>
+      <div class="slider-row">
+        <label>Rent</label>
+        <input type="range" id="sl-rent" min="0" max="100" value="15">
+        <span class="slider-val" id="sv-rent">15%</span>
+      </div>
+    </div>
+
+    <!-- RIGHT: Filters -->
+    <div class="panel filters-panel">
+      <h3>Filters</h3>
+
+      <details class="filter-group">
+        <summary>Commute &amp; Resilience</summary>
+        <div class="filter-body">
+          <div class="checkbox-row">
+            <input type="checkbox" id="f-bothU30">
+            <label for="f-bothU30">Both commutes &le;30 min</label>
+          </div>
+          <div class="filter-item">
+            <label>Her commute band</label>
+            <select id="f-herBand">
+              <option value="Any">Any</option>
+              <option value="≤20 min">&le;20 min</option>
+              <option value="21–30 min">21&ndash;30 min</option>
+              <option value="31–40 min">31&ndash;40 min</option>
+              <option value="41–50 min">41&ndash;50 min</option>
+              <option value="51+ min">51+ min</option>
+            </select>
+          </div>
+          <div class="filter-item">
+            <label>Him commute band</label>
+            <select id="f-himBand">
+              <option value="Any">Any</option>
+              <option value="≤20 min">&le;20 min</option>
+              <option value="21–30 min">21&ndash;30 min</option>
+              <option value="31–40 min">31&ndash;40 min</option>
+              <option value="41–50 min">41&ndash;50 min</option>
+              <option value="51+ min">51+ min</option>
+            </select>
+          </div>
+          <div class="filter-item">
+            <label>Line resilience</label>
+            <select id="f-lineRes">
+              <option value="Any">Any</option>
+              <option value="High">High</option>
+              <option value="Med">Med</option>
+              <option value="Low">Low</option>
+            </select>
+          </div>
+          <div class="filter-item">
+            <label>Strike resilience</label>
+            <select id="f-strikeRes">
+              <option value="Any">Any</option>
+              <option value="Good">Good</option>
+              <option value="Med">Med</option>
+              <option value="Poor">Poor</option>
+            </select>
+          </div>
+          <div class="filter-item">
+            <label>Peak crowding</label>
+            <select id="f-crowding">
+              <option value="Any">Any</option>
+              <option value="Comfortable">Comfortable</option>
+              <option value="Moderate">Moderate</option>
+              <option value="Crowded">Crowded</option>
+            </select>
+          </div>
+          <div class="checkbox-row">
+            <input type="checkbox" id="f-nightTube">
+            <label for="f-nightTube">Night Tube</label>
+          </div>
+        </div>
+      </details>
+
+      <details class="filter-group">
+        <summary>Safety &amp; Demographics</summary>
+        <div class="filter-body">
+          <div class="filter-item">
+            <label>Crime rate</label>
+            <select id="f-crime">
+              <option value="Any">Any</option>
+              <option value="Low">Low</option>
+              <option value="Med">Med</option>
+              <option value="High">High</option>
+              <option value="Very High">Very High</option>
+            </select>
+          </div>
+          <div class="filter-item">
+            <label>Drug crime</label>
+            <select id="f-drugCrime">
+              <option value="Any">Any</option>
+              <option value="Low">Low</option>
+              <option value="Med">Med</option>
+              <option value="High">High</option>
+            </select>
+          </div>
+          <div class="filter-item">
+            <label>Social housing</label>
+            <select id="f-socialHousing">
+              <option value="Any">Any</option>
+              <option value="Low">Low</option>
+              <option value="Med">Med</option>
+              <option value="High">High</option>
+            </select>
+          </div>
+          <div class="filter-item">
+            <label>Flood risk</label>
+            <select id="f-floodRisk">
+              <option value="Any">Any</option>
+              <option value="Low">Low</option>
+              <option value="Med">Med</option>
+              <option value="High">High</option>
+            </select>
+          </div>
+          <div class="filter-item">
+            <label>Heathrow noise</label>
+            <select id="f-heathrowNoise">
+              <option value="Any">Any</option>
+              <option value="None">None</option>
+              <option value="Low">Low</option>
+              <option value="Med">Med</option>
+              <option value="High">High</option>
+            </select>
+          </div>
+          <div class="filter-item">
+            <label>Area trajectory</label>
+            <select id="f-trajectory">
+              <option value="Any">Any</option>
+              <option value="Gentrifying">Gentrifying</option>
+              <option value="Established affluent">Established affluent</option>
+              <option value="Peaked">Peaked</option>
+              <option value="Mixed">Mixed</option>
+            </select>
+          </div>
+        </div>
+      </details>
+
+      <details class="filter-group">
+        <summary>Property &amp; Lifestyle</summary>
+        <div class="filter-body">
+          <div class="checkbox-row">
+            <input type="checkbox" id="f-periodGarden">
+            <label for="f-periodGarden">Period garden flat &le;&pound;2,800</label>
+          </div>
+          <div class="checkbox-row">
+            <input type="checkbox" id="f-threeBed">
+            <label for="f-threeBed">3-bed &le;&pound;2,800</label>
+          </div>
+          <div class="filter-item">
+            <label>Bike storage</label>
+            <select id="f-bikeStorage">
+              <option value="Any">Any</option>
+              <option value="Good">Good</option>
+              <option value="OK">OK</option>
+              <option value="Hard">Hard</option>
+            </select>
+          </div>
+          <div class="filter-item">
+            <label>Gym access min</label>
+            <select id="f-gymAccess">
+              <option value="Any">Any</option>
+              <option value="3">3+</option>
+              <option value="4">4+</option>
+              <option value="5">5</option>
+            </select>
+          </div>
+          <div class="checkbox-row">
+            <input type="checkbox" id="f-twoGrocers">
+            <label for="f-twoGrocers">2+ quality grocers</label>
+          </div>
+          <div class="checkbox-row">
+            <input type="checkbox" id="f-bigPark">
+            <label for="f-bigPark">Big park</label>
+          </div>
+          <div class="filter-item">
+            <label>Status</label>
+            <select id="f-status">
+              <option value="All">All</option>
+              <option value="Benchmark">Benchmark</option>
+              <option value="Contender">Contender</option>
+              <option value="Compromise">Compromise</option>
+            </select>
+          </div>
+          <div class="filter-item">
+            <label>Region</label>
+            <select id="f-region">
+              <option value="All">All</option>
+              <option value="SW/South">SW/South</option>
+              <option value="West">West</option>
+              <option value="North">North</option>
+              <option value="NE">NE</option>
+              <option value="Surrey/Commuter">Surrey/Commuter</option>
+            </select>
+          </div>
+          <div class="rent-slider-row filter-item" style="grid-column:span 2">
+            <label>Max rent: <span id="rentValLabel">Max: &pound;3,000</span></label>
+            <input type="range" id="f-maxRent" min="1500" max="3000" step="50" value="3000">
+          </div>
+        </div>
+      </details>
+    </div>
+  </div>
+
+  <!-- STATS BAR -->
+  <div class="stats-bar" id="statsBar">
+    <span>Loading&hellip;</span>
+  </div>
+
+  <!-- WRITE-UP PANEL -->
+  <div class="writeup-panel" id="writeupPanel">
+    <div class="writeup-inner" id="writeupInner"></div>
+  </div>
+
+  <!-- MAP -->
+  <div class="map-container">
+    <div id="map"></div>
+  </div>
+
+  <!-- TABLE -->
+  <div class="table-container">
+    <div class="table-scroll">
+      <table id="areaTable">
+        <thead>
+          <tr>
+            <th data-col="rank">Rank</th>
+            <th data-col="area">Area</th>
+            <th data-col="score" class="sort-active">Score &#9660;</th>
+            <th data-col="status">Status</th>
+            <th data-col="region">Region</th>
+            <th data-col="both_u30">Both&le;30</th>
+            <th data-col="her_kx_mins">Her&rarr;KX</th>
+            <th data-col="him_city_mins">Him&rarr;City</th>
+            <th data-col="strike_resilience">Strike</th>
+            <th data-col="period_garden_flat_u2800">Garden</th>
+            <th data-col="three_bed_u2800">3-Bed</th>
+            <th data-col="cycling">Bike</th>
+            <th data-col="indicative_rent">Rent &pound;</th>
+            <th data-col="crime_rate_band">Crime</th>
+            <th data-col="heathrow_noise">Noise</th>
+            <th data-col="area_trajectory">Trajectory</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<script>
+const AREAS_DATA = [{"area": "Finsbury Park/Stroud Green", "postcode": "N4/N8", "region": "North", "nearest_station": "Finsbury Park", "walk_to_station_mins": 5, "her_kx_mins": 15, "her_changes": 0, "him_city_mins": 18, "him_changes": 0, "line_resilience": "High", "backup_notes": "Victoria + Piccadilly lines; Great Northern trains; buses", "strike_resilience": "Good", "strike_backup": "Great Northern (National Rail) from Finsbury Park to KX+Moorgate; unaffected by TfL", "peak_crowding": "Crowded", "night_tube": true, "cycling_her_to_kx_mins": 20, "cycling_him_to_city_mins": 30, "crime_rate_band": "Med", "drug_crime_band": "Med", "deprivation_band": "Med", "demographic_profile": "Gentrifying", "area_trajectory": "Gentrifying", "hoodmaps_label": "Hipsters", "owner_occupier_pct": 32, "community_housing_pct": 26, "night_safe": true, "period_garden_flat_u2800": true, "three_bed_u2800": true, "bike_storage": "Good", "indicative_rent": 2200, "council_tax_band_est": "Med (£1,800–£2,400/yr)", "big_park": true, "cycling": 5, "flood_risk": "Low", "heathrow_noise": "None", "amenity_score": 4, "quality_grocers_count": 1, "gym_access": 4, "fit_vs_east_putney": 5, "lat": 51.564, "lng": -0.106, "write_up": "Exceptional commute with three-line resilience and National Rail backup; lower rents than Highbury; Stroud Green Road café strip is excellent; higher crime and social housing than Highbury.", "quick_verdict": "Best value high-commute area — Highbury's more affordable neighbour with same transport links.", "both_u30": true, "her_commute_band": "≤20 min", "him_commute_band": "≤20 min", "rent_band": "£2,000–£2,400", "owner_occupier_band": "Med (30–60%)", "social_housing": "Med", "two_plus_grocers": false, "score": 82.5, "score_tier": "Top pick (80+)", "status": "Contender"}, {"area": "Tooting Broadway", "postcode": "SW17", "region": "SW/South", "nearest_station": "Tooting Broadway", "walk_to_station_mins": 5, "her_kx_mins": 26, "her_changes": 0, "him_city_mins": 22, "him_changes": 0, "line_resilience": "Med", "backup_notes": "Buses to Clapham Jn; Balham (Thameslink) 10 min walk", "strike_resilience": "Med", "strike_backup": "Walk to Balham for Thameslink; buses cover Clapham Junction", "peak_crowding": "Moderate", "night_tube": true, "cycling_her_to_kx_mins": 0, "cycling_him_to_city_mins": 0, "crime_rate_band": "Low", "drug_crime_band": "Low", "deprivation_band": "Low", "demographic_profile": "Established affluent", "area_trajectory": "Gentrifying", "hoodmaps_label": "Hipsters", "owner_occupier_pct": 38, "community_housing_pct": 22, "night_safe": true, "period_garden_flat_u2800": true, "three_bed_u2800": true, "bike_storage": "Good", "indicative_rent": 2200, "council_tax_band_est": "Med (£1,800–£2,400/yr)", "big_park": true, "cycling": 4, "flood_risk": "Low", "heathrow_noise": "None", "amenity_score": 4, "quality_grocers_count": 2, "gym_access": 4, "fit_vs_east_putney": 5, "lat": 51.427, "lng": -0.168, "write_up": "Northern line direct to both, excellent restaurants (best Sri Lankan and South Indian in London), lowest rents in the Northern line tier, and 3-beds occasionally under £2,800.", "quick_verdict": "Best rent-to-commute ratio on the Northern line; brilliant food scene is a bonus.", "both_u30": true, "her_commute_band": "21–30 min", "him_commute_band": "21–30 min", "rent_band": "£2,000–£2,400", "owner_occupier_band": "Med (30–60%)", "social_housing": "Med", "two_plus_grocers": true, "score": 80.0, "score_tier": "Top pick (80+)", "status": "Contender"}, {"area": "Walthamstow Central", "postcode": "E17", "region": "NE", "nearest_station": "Walthamstow Central", "walk_to_station_mins": 7, "her_kx_mins": 26, "her_changes": 0, "him_city_mins": 23, "him_changes": 1, "line_resilience": "Med", "backup_notes": "Victoria line direct; Overground for Stratford DLR backup", "strike_resilience": "Poor", "strike_backup": "Overground to Stratford for DLR to Bank; slow but workable", "peak_crowding": "Crowded", "night_tube": true, "cycling_her_to_kx_mins": 0, "cycling_him_to_city_mins": 0, "crime_rate_band": "Med", "drug_crime_band": "Med", "deprivation_band": "Med", "demographic_profile": "Gentrifying", "area_trajectory": "Gentrifying", "hoodmaps_label": "Mixed", "owner_occupier_pct": 32, "community_housing_pct": 28, "night_safe": true, "period_garden_flat_u2800": true, "three_bed_u2800": true, "bike_storage": "Good", "indicative_rent": 2000, "council_tax_band_est": "Med (£1,800–£2,400/yr)", "big_park": true, "cycling": 5, "flood_risk": "Low", "heathrow_noise": "None", "amenity_score": 3, "quality_grocers_count": 1, "gym_access": 3, "fit_vs_east_putney": 3, "lat": 51.583, "lng": -0.021, "write_up": "Direct Victoria line; 3-beds occasionally under budget; more mixed than the Village; Victoria line peak crowding is a daily reality.", "quick_verdict": "Value play with good commute; Central is more mixed than Village — check the specific street.", "both_u30": true, "her_commute_band": "21–30 min", "him_commute_band": "21–30 min", "rent_band": "£2,000–£2,400", "owner_occupier_band": "Med (30–60%)", "social_housing": "Med", "two_plus_grocers": false, "score": 74.3, "score_tier": "Strong contender (65–79)", "status": "Contender"}, {"area": "Leyton/Leytonstone", "postcode": "E10/E11", "region": "NE", "nearest_station": "Leyton", "walk_to_station_mins": 8, "her_kx_mins": 30, "her_changes": 1, "him_city_mins": 22, "him_changes": 1, "line_resilience": "Med", "backup_notes": "Central line; Overground from Leytonstone", "strike_resilience": "Med", "strike_backup": "Overground (National Rail-operated) from Leytonstone; buses to Stratford", "peak_crowding": "Moderate", "night_tube": true, "cycling_her_to_kx_mins": 0, "cycling_him_to_city_mins": 0, "crime_rate_band": "Med", "drug_crime_band": "Med", "deprivation_band": "Med", "demographic_profile": "Gentrifying", "area_trajectory": "Gentrifying", "hoodmaps_label": "Hipsters", "owner_occupier_pct": 38, "community_housing_pct": 26, "night_safe": true, "period_garden_flat_u2800": true, "three_bed_u2800": true, "bike_storage": "Good", "indicative_rent": 1800, "council_tax_band_est": "Med (£1,800–£2,400/yr)", "big_park": true, "cycling": 4, "flood_risk": "Low", "heathrow_noise": "None", "amenity_score": 3, "quality_grocers_count": 1, "gym_access": 3, "fit_vs_east_putney": 3, "lat": 51.567, "lng": 0.006, "write_up": "Cheapest rents with a viable commute in the dataset; 3-beds available under budget; Leytonstone's independent scene is genuinely good and improving fast.", "quick_verdict": "Best value if you're comfortable being east; 3-bed + garden at £1,800 is rare in London.", "both_u30": true, "her_commute_band": "21–30 min", "him_commute_band": "21–30 min", "rent_band": "Under £2,000", "owner_occupier_band": "Med (30–60%)", "social_housing": "Med", "two_plus_grocers": false, "score": 73.5, "score_tier": "Strong contender (65–79)", "status": "Contender"}, {"area": "Walthamstow Village", "postcode": "E17", "region": "NE", "nearest_station": "Wood Street / Walthamstow Central", "walk_to_station_mins": 10, "her_kx_mins": 28, "her_changes": 0, "him_city_mins": 25, "him_changes": 1, "line_resilience": "Med", "backup_notes": "Victoria line; Overground from Wood Street", "strike_resilience": "Poor", "strike_backup": "Overground (National Rail-operated) from Wood Street; buses to Stratford for DLR", "peak_crowding": "Crowded", "night_tube": true, "cycling_her_to_kx_mins": 0, "cycling_him_to_city_mins": 0, "crime_rate_band": "Med", "drug_crime_band": "Med", "deprivation_band": "Low", "demographic_profile": "Gentrifying", "area_trajectory": "Gentrifying", "hoodmaps_label": "Hipsters", "owner_occupier_pct": 40, "community_housing_pct": 22, "night_safe": true, "period_garden_flat_u2800": true, "three_bed_u2800": true, "bike_storage": "Good", "indicative_rent": 2200, "council_tax_band_est": "Med (£1,800–£2,400/yr)", "big_park": true, "cycling": 5, "flood_risk": "Low", "heathrow_noise": "None", "amenity_score": 4, "quality_grocers_count": 1, "gym_access": 3, "fit_vs_east_putney": 4, "lat": 51.582, "lng": -0.017, "write_up": "London's fastest-gentrifying village; excellent cycling (Mini-Holland), brilliant independent cafés, Victorian terraces with cellars; Victoria line is crowded peak-hour.", "quick_verdict": "Move here for value, cycling, and village character; accept the crowd and eastward location.", "both_u30": true, "her_commute_band": "21–30 min", "him_commute_band": "21–30 min", "rent_band": "£2,000–£2,400", "owner_occupier_band": "Med (30–60%)", "social_housing": "Med", "two_plus_grocers": false, "score": 70.8, "score_tier": "Strong contender (65–79)", "status": "Contender"}, {"area": "Highbury/Canonbury", "postcode": "N5", "region": "North", "nearest_station": "Highbury & Islington", "walk_to_station_mins": 5, "her_kx_mins": 12, "her_changes": 0, "him_city_mins": 15, "him_changes": 0, "line_resilience": "High", "backup_notes": "Victoria line + Great Northern to Moorgate + Overground: three independent routes", "strike_resilience": "Good", "strike_backup": "Great Northern (National Rail) to Moorgate unaffected by TfL strikes; Overground also often unaffected", "peak_crowding": "Crowded", "night_tube": true, "cycling_her_to_kx_mins": 25, "cycling_him_to_city_mins": 25, "crime_rate_band": "Low", "drug_crime_band": "Low", "deprivation_band": "Low", "demographic_profile": "Established affluent", "area_trajectory": "Peaked", "hoodmaps_label": "Hipsters", "owner_occupier_pct": 38, "community_housing_pct": 20, "night_safe": true, "period_garden_flat_u2800": true, "three_bed_u2800": false, "bike_storage": "Good", "indicative_rent": 2700, "council_tax_band_est": "Med (£1,800–£2,400/yr)", "big_park": true, "cycling": 5, "flood_risk": "Low", "heathrow_noise": "None", "amenity_score": 4, "quality_grocers_count": 2, "gym_access": 4, "fit_vs_east_putney": 5, "lat": 51.546, "lng": -0.103, "write_up": "The best-connected spot in this entire list: 12 min to KX, 15 min to Moorgate, three independent transit lines, strike-proof National Rail backup, and excellent cycling infrastructure.", "quick_verdict": "Top pick for commute and resilience — if you can find a garden flat at £2,700.", "both_u30": true, "her_commute_band": "≤20 min", "him_commute_band": "≤20 min", "rent_band": "£2,400–£2,800", "owner_occupier_band": "Med (30–60%)", "social_housing": "Med", "two_plus_grocers": true, "score": 69.1, "score_tier": "Strong contender (65–79)", "status": "Contender"}, {"area": "Balham", "postcode": "SW12", "region": "SW/South", "nearest_station": "Balham", "walk_to_station_mins": 5, "her_kx_mins": 26, "her_changes": 0, "him_city_mins": 18, "him_changes": 0, "line_resilience": "High", "backup_notes": "Thameslink from same station; buses to Clapham Junction", "strike_resilience": "Good", "strike_backup": "Thameslink (City Thameslink) unaffected by TfL strikes — direct to City from Balham", "peak_crowding": "Moderate", "night_tube": true, "cycling_her_to_kx_mins": 0, "cycling_him_to_city_mins": 0, "crime_rate_band": "Low", "drug_crime_band": "Low", "deprivation_band": "Low", "demographic_profile": "Established affluent", "area_trajectory": "Gentrifying", "hoodmaps_label": "Yuppies", "owner_occupier_pct": 42, "community_housing_pct": 18, "night_safe": true, "period_garden_flat_u2800": true, "three_bed_u2800": false, "bike_storage": "Good", "indicative_rent": 2500, "council_tax_band_est": "Med (£1,800–£2,400/yr)", "big_park": true, "cycling": 4, "flood_risk": "Low", "heathrow_noise": "None", "amenity_score": 4, "quality_grocers_count": 2, "gym_access": 4, "fit_vs_east_putney": 5, "lat": 51.443, "lng": -0.152, "write_up": "Northern line direct to both offices with zero changes; Thameslink backup; period Victorian terraces with private gardens and cellars; Waitrose + M&S on the high street.", "quick_verdict": "Move here if commute + garden + amenities define the search — the strongest all-rounder in south London.", "both_u30": true, "her_commute_band": "21–30 min", "him_commute_band": "≤20 min", "rent_band": "£2,400–£2,800", "owner_occupier_band": "Med (30–60%)", "social_housing": "Med", "two_plus_grocers": true, "score": 68.6, "score_tier": "Strong contender (65–79)", "status": "Contender"}, {"area": "Clapham South", "postcode": "SW4", "region": "SW/South", "nearest_station": "Clapham South", "walk_to_station_mins": 5, "her_kx_mins": 24, "her_changes": 0, "him_city_mins": 16, "him_changes": 0, "line_resilience": "High", "backup_notes": "Multiple buses; Clapham Junction 12 min walk (SWR)", "strike_resilience": "Good", "strike_backup": "Walk/cycle to Clapham Junction for SWR; buses very frequent", "peak_crowding": "Moderate", "night_tube": true, "cycling_her_to_kx_mins": 0, "cycling_him_to_city_mins": 0, "crime_rate_band": "Low", "drug_crime_band": "Low", "deprivation_band": "Low", "demographic_profile": "Established affluent", "area_trajectory": "Peaked", "hoodmaps_label": "Yuppies", "owner_occupier_pct": 38, "community_housing_pct": 20, "night_safe": true, "period_garden_flat_u2800": true, "three_bed_u2800": false, "bike_storage": "Good", "indicative_rent": 2600, "council_tax_band_est": "Med (£1,800–£2,400/yr)", "big_park": true, "cycling": 4, "flood_risk": "Low", "heathrow_noise": "None", "amenity_score": 4, "quality_grocers_count": 2, "gym_access": 4, "fit_vs_east_putney": 5, "lat": 51.451, "lng": -0.148, "write_up": "Fastest commute to City from south London at 16 min with zero changes; Clapham Common on the doorstep; strong garden flat stock on the quieter streets west of the tube.", "quick_verdict": "Best commute south of the river; move here if both commutes and green space matter.", "both_u30": true, "her_commute_band": "21–30 min", "him_commute_band": "≤20 min", "rent_band": "£2,400–£2,800", "owner_occupier_band": "Med (30–60%)", "social_housing": "Med", "two_plus_grocers": true, "score": 68.4, "score_tier": "Strong contender (65–79)", "status": "Contender"}, {"area": "Kentish Town", "postcode": "NW5", "region": "North", "nearest_station": "Kentish Town", "walk_to_station_mins": 5, "her_kx_mins": 15, "her_changes": 0, "him_city_mins": 22, "him_changes": 1, "line_resilience": "High", "backup_notes": "Thameslink at same station; Northern line; buses to Highbury", "strike_resilience": "Good", "strike_backup": "Thameslink from Kentish Town direct to City Thameslink — runs on TfL strikes", "peak_crowding": "Moderate", "night_tube": true, "cycling_her_to_kx_mins": 25, "cycling_him_to_city_mins": 0, "crime_rate_band": "Low", "drug_crime_band": "Low", "deprivation_band": "Low", "demographic_profile": "Gentrifying", "area_trajectory": "Gentrifying", "hoodmaps_label": "Hipsters", "owner_occupier_pct": 38, "community_housing_pct": 20, "night_safe": true, "period_garden_flat_u2800": true, "three_bed_u2800": false, "bike_storage": "Good", "indicative_rent": 2600, "council_tax_band_est": "Med (£1,800–£2,400/yr)", "big_park": true, "cycling": 4, "flood_risk": "Low", "heathrow_noise": "None", "amenity_score": 4, "quality_grocers_count": 2, "gym_access": 4, "fit_vs_east_putney": 5, "lat": 51.549, "lng": -0.141, "write_up": "Her 15-min direct Northern line to KX is one of the best commutes in this list; Thameslink strike backup is exceptional; great garden flat stock on the Victorian streets off Highgate Road.", "quick_verdict": "Move here for her commute + strike resilience; best northern-tier all-rounder.", "both_u30": true, "her_commute_band": "≤20 min", "him_commute_band": "21–30 min", "rent_band": "£2,400–£2,800", "owner_occupier_band": "Med (30–60%)", "social_housing": "Med", "two_plus_grocers": true, "score": 68.1, "score_tier": "Strong contender (65–79)", "status": "Contender"}, {"area": "Tooting Bec", "postcode": "SW17", "region": "SW/South", "nearest_station": "Tooting Bec", "walk_to_station_mins": 5, "her_kx_mins": 28, "her_changes": 0, "him_city_mins": 20, "him_changes": 0, "line_resilience": "High", "backup_notes": "Bus to Tooting Broadway (different branch); buses to Clapham Jn", "strike_resilience": "Med", "strike_backup": "Buses to Clapham Jn for SWR; no direct National Rail from Tooting Bec", "peak_crowding": "Moderate", "night_tube": true, "cycling_her_to_kx_mins": 0, "cycling_him_to_city_mins": 0, "crime_rate_band": "Low", "drug_crime_band": "Low", "deprivation_band": "Low", "demographic_profile": "Established affluent", "area_trajectory": "Gentrifying", "hoodmaps_label": "Hipsters", "owner_occupier_pct": 40, "community_housing_pct": 20, "night_safe": true, "period_garden_flat_u2800": true, "three_bed_u2800": false, "bike_storage": "Good", "indicative_rent": 2350, "council_tax_band_est": "Med (£1,800–£2,400/yr)", "big_park": true, "cycling": 4, "flood_risk": "Low", "heathrow_noise": "None", "amenity_score": 4, "quality_grocers_count": 2, "gym_access": 4, "fit_vs_east_putney": 5, "lat": 51.434, "lng": -0.158, "write_up": "Northern line direct to both offices; Tooting Bec Lido and Tooting Common on the doorstep; lower rents than Balham with the same commute quality; brilliant café scene on Balham High Road.", "quick_verdict": "Best value in the Northern line golden tier — same commute as Balham, £150/mo cheaper.", "both_u30": true, "her_commute_band": "21–30 min", "him_commute_band": "≤20 min", "rent_band": "£2,000–£2,400", "owner_occupier_band": "Med (30–60%)", "social_housing": "Med", "two_plus_grocers": true, "score": 67.3, "score_tier": "Strong contender (65–79)", "status": "Contender"}, {"area": "Reigate/Redhill", "postcode": "RH1/RH2", "region": "Surrey/Commuter", "nearest_station": "Redhill", "walk_to_station_mins": 10, "her_kx_mins": 58, "her_changes": 1, "him_city_mins": 65, "him_changes": 2, "line_resilience": "Low", "backup_notes": "Thameslink to London Bridge; SWR to Waterloo", "strike_resilience": "Good", "strike_backup": "Thameslink and SWR both National Rail — unaffected by TfL strikes", "peak_crowding": "Comfortable", "night_tube": false, "cycling_her_to_kx_mins": 0, "cycling_him_to_city_mins": 0, "crime_rate_band": "Low", "drug_crime_band": "Low", "deprivation_band": "Low", "demographic_profile": "Established affluent", "area_trajectory": "Peaked", "hoodmaps_label": "Families", "owner_occupier_pct": 65, "community_housing_pct": 10, "night_safe": true, "period_garden_flat_u2800": true, "three_bed_u2800": true, "bike_storage": "Good", "indicative_rent": 1500, "council_tax_band_est": "High (>£2,400/yr)", "big_park": true, "cycling": 2, "flood_risk": "Low", "heathrow_noise": "None", "amenity_score": 2, "quality_grocers_count": 1, "gym_access": 2, "fit_vs_east_putney": 1, "lat": 51.237, "lng": -0.206, "write_up": "Cheapest rents by far with 3-beds and gardens easily in budget, and excellent National Rail strike resilience — but 58-65 min commutes are the furthest in this list.", "quick_verdict": "Only viable with 4 WFH days — included to show the extreme end of the compromise spectrum.", "both_u30": false, "her_commute_band": "51+ min", "him_commute_band": "51+ min", "rent_band": "Under £2,000", "owner_occupier_band": "High (>60%)", "social_housing": "Low", "two_plus_grocers": false, "score": 66.3, "score_tier": "Strong contender (65–79)", "status": "Compromise"}, {"area": "Epsom", "postcode": "KT18", "region": "Surrey/Commuter", "nearest_station": "Epsom", "walk_to_station_mins": 10, "her_kx_mins": 52, "her_changes": 1, "him_city_mins": 60, "him_changes": 2, "line_resilience": "Low", "backup_notes": "SWR/Thameslink to London Bridge or Waterloo", "strike_resilience": "Good", "strike_backup": "SWR and Thameslink both unaffected by TfL strikes", "peak_crowding": "Comfortable", "night_tube": false, "cycling_her_to_kx_mins": 0, "cycling_him_to_city_mins": 0, "crime_rate_band": "Low", "drug_crime_band": "Low", "deprivation_band": "Low", "demographic_profile": "Established affluent", "area_trajectory": "Peaked", "hoodmaps_label": "Families", "owner_occupier_pct": 68, "community_housing_pct": 8, "night_safe": true, "period_garden_flat_u2800": true, "three_bed_u2800": true, "bike_storage": "Good", "indicative_rent": 1700, "council_tax_band_est": "High (>£2,400/yr)", "big_park": true, "cycling": 2, "flood_risk": "Low", "heathrow_noise": "None", "amenity_score": 2, "quality_grocers_count": 1, "gym_access": 2, "fit_vs_east_putney": 1, "lat": 51.337, "lng": -0.268, "write_up": "Cheapest rents in the Surrey tier with good safety; dual National Rail backup on strike days; but 52-60 min commutes are simply too long.", "quick_verdict": "Best value in Surrey for space; commute is a dealbreaker.", "both_u30": false, "her_commute_band": "51+ min", "him_commute_band": "51+ min", "rent_band": "Under £2,000", "owner_occupier_band": "High (>60%)", "social_housing": "Low", "two_plus_grocers": false, "score": 65.3, "score_tier": "Strong contender (65–79)", "status": "Compromise"}, {"area": "Berrylands", "postcode": "KT5", "region": "Surrey/Commuter", "nearest_station": "Berrylands", "walk_to_station_mins": 8, "her_kx_mins": 40, "her_changes": 1, "him_city_mins": 47, "him_changes": 2, "line_resilience": "Low", "backup_notes": "SWR to Waterloo; buses to Surbiton", "strike_resilience": "Good", "strike_backup": "SWR unaffected", "peak_crowding": "Comfortable", "night_tube": false, "cycling_her_to_kx_mins": 0, "cycling_him_to_city_mins": 0, "crime_rate_band": "Low", "drug_crime_band": "Low", "deprivation_band": "Low", "demographic_profile": "Established affluent", "area_trajectory": "Peaked", "hoodmaps_label": "Families", "owner_occupier_pct": 66, "community_housing_pct": 8, "night_safe": true, "period_garden_flat_u2800": true, "three_bed_u2800": true, "bike_storage": "Good", "indicative_rent": 1700, "council_tax_band_est": "High (>£2,400/yr)", "big_park": false, "cycling": 2, "flood_risk": "Low", "heathrow_noise": "None", "amenity_score": 2, "quality_grocers_count": 1, "gym_access": 2, "fit_vs_east_putney": 1, "lat": 51.388, "lng": -0.284, "write_up": "Lowest rent in the dataset with houses available; commute is 40+ min for her, 47 min for him — clearly outside acceptable range.", "quick_verdict": "Only viable if remote work reduces commute days to 2-3 per week.", "both_u30": false, "her_commute_band": "31–40 min", "him_commute_band": "41–50 min", "rent_band": "Under £2,000", "owner_occupier_band": "High (>60%)", "social_housing": "Low", "two_plus_grocers": false, "score": 63.3, "score_tier": "Compromise (50–64)", "status": "Compromise"}, {"area": "Hinchley Wood", "postcode": "KT10", "region": "Surrey/Commuter", "nearest_station": "Hinchley Wood", "walk_to_station_mins": 15, "her_kx_mins": 50, "her_changes": 1, "him_city_mins": 57, "him_changes": 2, "line_resilience": "Low", "backup_notes": "SWR from Hinchley Wood to Waterloo; very car-dependent locally", "strike_resilience": "Good", "strike_backup": "SWR unaffected; limited value given long journey", "peak_crowding": "Comfortable", "night_tube": false, "cycling_her_to_kx_mins": 0, "cycling_him_to_city_mins": 0, "crime_rate_band": "Low", "drug_crime_band": "Low", "deprivation_band": "Low", "demographic_profile": "Established affluent", "area_trajectory": "Peaked", "hoodmaps_label": "Families", "owner_occupier_pct": 78, "community_housing_pct": 4, "night_safe": true, "period_garden_flat_u2800": true, "three_bed_u2800": true, "bike_storage": "Good", "indicative_rent": 1900, "council_tax_band_est": "High (>£2,400/yr)", "big_park": true, "cycling": 2, "flood_risk": "Low", "heathrow_noise": "None", "amenity_score": 1, "quality_grocers_count": 0, "gym_access": 1, "fit_vs_east_putney": 1, "lat": 51.374, "lng": -0.352, "write_up": "Very quiet, safe, and cheap but effectively rural — 50+ min commutes and car-dependent lifestyle is incompatible with these jobs.", "quick_verdict": "Wrong side of the commute threshold by a wide margin.", "both_u30": false, "her_commute_band": "41–50 min", "him_commute_band": "51+ min", "rent_band": "Under £2,000", "owner_occupier_band": "High (>60%)", "social_housing": "Low", "two_plus_grocers": false, "score": 63.2, "score_tier": "Compromise (50–64)", "status": "Compromise"}, {"area": "Tufnell Park/Archway", "postcode": "N7/N19", "region": "North", "nearest_station": "Tufnell Park", "walk_to_station_mins": 7, "her_kx_mins": 22, "her_changes": 0, "him_city_mins": 27, "him_changes": 1, "line_resilience": "Med", "backup_notes": "Bus to Kentish Town; Archway (same Northern line) nearby", "strike_resilience": "Med", "strike_backup": "Walk to Kentish Town for Thameslink fallback", "peak_crowding": "Moderate", "night_tube": true, "cycling_her_to_kx_mins": 30, "cycling_him_to_city_mins": 0, "crime_rate_band": "Low", "drug_crime_band": "Low", "deprivation_band": "Low", "demographic_profile": "Gentrifying", "area_trajectory": "Gentrifying", "hoodmaps_label": "Hipsters", "owner_occupier_pct": 40, "community_housing_pct": 22, "night_safe": true, "period_garden_flat_u2800": true, "three_bed_u2800": false, "bike_storage": "Good", "indicative_rent": 2400, "council_tax_band_est": "Med (£1,800–£2,400/yr)", "big_park": true, "cycling": 4, "flood_risk": "Low", "heathrow_noise": "None", "amenity_score": 3, "quality_grocers_count": 1, "gym_access": 3, "fit_vs_east_putney": 5, "lat": 51.565, "lng": -0.136, "write_up": "Good-value Victorian streets with direct Northern line to KX; lower amenity density than Kentish Town but improving; garden flats available in budget.", "quick_verdict": "Move here for value + commute; Kentish Town's more affordable sibling.", "both_u30": true, "her_commute_band": "21–30 min", "him_commute_band": "21–30 min", "rent_band": "£2,400–£2,800", "owner_occupier_band": "Med (30–60%)", "social_housing": "Med", "two_plus_grocers": false, "score": 62.5, "score_tier": "Compromise (50–64)", "status": "Compromise"}, {"area": "New Malden", "postcode": "KT3", "region": "Surrey/Commuter", "nearest_station": "New Malden", "walk_to_station_mins": 8, "her_kx_mins": 38, "her_changes": 1, "him_city_mins": 45, "him_changes": 2, "line_resilience": "Low", "backup_notes": "SWR only; limited bus coverage", "strike_resilience": "Good", "strike_backup": "SWR to Waterloo unaffected by TfL strikes", "peak_crowding": "Comfortable", "night_tube": false, "cycling_her_to_kx_mins": 0, "cycling_him_to_city_mins": 0, "crime_rate_band": "Low", "drug_crime_band": "Low", "deprivation_band": "Low", "demographic_profile": "Established affluent", "area_trajectory": "Peaked", "hoodmaps_label": "Families", "owner_occupier_pct": 62, "community_housing_pct": 10, "night_safe": true, "period_garden_flat_u2800": true, "three_bed_u2800": true, "bike_storage": "Good", "indicative_rent": 1800, "council_tax_band_est": "High (>£2,400/yr)", "big_park": false, "cycling": 2, "flood_risk": "Low", "heathrow_noise": "None", "amenity_score": 2, "quality_grocers_count": 1, "gym_access": 2, "fit_vs_east_putney": 2, "lat": 51.404, "lng": -0.255, "write_up": "Cheapest rents with a house+garden in the dataset but commutes are 38-45 min and amenities are suburban.", "quick_verdict": "Maximum space for minimum money; accept the commute and suburban lifestyle.", "both_u30": false, "her_commute_band": "31–40 min", "him_commute_band": "41–50 min", "rent_band": "Under £2,000", "owner_occupier_band": "High (>60%)", "social_housing": "Low", "two_plus_grocers": false, "score": 62.2, "score_tier": "Compromise (50–64)", "status": "Compromise"}, {"area": "Thames Ditton", "postcode": "KT7", "region": "Surrey/Commuter", "nearest_station": "Thames Ditton", "walk_to_station_mins": 10, "her_kx_mins": 42, "her_changes": 1, "him_city_mins": 50, "him_changes": 2, "line_resilience": "Low", "backup_notes": "SWR to Waterloo; very limited buses", "strike_resilience": "Good", "strike_backup": "SWR unaffected; onward legs still need tube from Waterloo", "peak_crowding": "Comfortable", "night_tube": false, "cycling_her_to_kx_mins": 0, "cycling_him_to_city_mins": 0, "crime_rate_band": "Low", "drug_crime_band": "Low", "deprivation_band": "Low", "demographic_profile": "Established affluent", "area_trajectory": "Peaked", "hoodmaps_label": "Families", "owner_occupier_pct": 68, "community_housing_pct": 7, "night_safe": true, "period_garden_flat_u2800": true, "three_bed_u2800": true, "bike_storage": "Good", "indicative_rent": 1900, "council_tax_band_est": "High (>£2,400/yr)", "big_park": true, "cycling": 3, "flood_risk": "Med", "heathrow_noise": "None", "amenity_score": 2, "quality_grocers_count": 1, "gym_access": 2, "fit_vs_east_putney": 1, "lat": 51.389, "lng": -0.334, "write_up": "Beautiful Thames-side village with excellent safety but commutes of 42-50 min put it firmly in compromise territory.", "quick_verdict": "Perfect retirement village; wrong commute for these jobs.", "both_u30": false, "her_commute_band": "41–50 min", "him_commute_band": "41–50 min", "rent_band": "Under £2,000", "owner_occupier_band": "High (>60%)", "social_housing": "Low", "two_plus_grocers": false, "score": 62.2, "score_tier": "Compromise (50–64)", "status": "Compromise"}, {"area": "Gospel Oak", "postcode": "NW3", "region": "North", "nearest_station": "Gospel Oak", "walk_to_station_mins": 7, "her_kx_mins": 18, "her_changes": 0, "him_city_mins": 28, "him_changes": 1, "line_resilience": "Med", "backup_notes": "Overground + bus to Kentish Town for Northern", "strike_resilience": "Good", "strike_backup": "Overground (London Overground) to Gospel Oak is National Rail-operated; walk to Kentish Town for Thameslink", "peak_crowding": "Comfortable", "night_tube": false, "cycling_her_to_kx_mins": 30, "cycling_him_to_city_mins": 0, "crime_rate_band": "Low", "drug_crime_band": "Low", "deprivation_band": "Low", "demographic_profile": "Established affluent", "area_trajectory": "Peaked", "hoodmaps_label": "Families", "owner_occupier_pct": 50, "community_housing_pct": 16, "night_safe": true, "period_garden_flat_u2800": true, "three_bed_u2800": false, "bike_storage": "Good", "indicative_rent": 2600, "council_tax_band_est": "Med (£1,800–£2,400/yr)", "big_park": true, "cycling": 4, "flood_risk": "Low", "heathrow_noise": "None", "amenity_score": 3, "quality_grocers_count": 1, "gym_access": 3, "fit_vs_east_putney": 5, "lat": 51.554, "lng": -0.155, "write_up": "Quiet, low-crime enclave between Hampstead Heath and Parliament Hill; Overground offers strike resilience; her 18-min KX commute is excellent.", "quick_verdict": "Move here if you want Hampstead Heath lifestyle at Kentish Town prices.", "both_u30": true, "her_commute_band": "≤20 min", "him_commute_band": "21–30 min", "rent_band": "£2,400–£2,800", "owner_occupier_band": "Med (30–60%)", "social_housing": "Med", "two_plus_grocers": false, "score": 62.0, "score_tier": "Compromise (50–64)", "status": "Compromise"}, {"area": "Wood Green", "postcode": "N22", "region": "North", "nearest_station": "Wood Green", "walk_to_station_mins": 8, "her_kx_mins": 30, "her_changes": 1, "him_city_mins": 30, "him_changes": 1, "line_resilience": "Med", "backup_notes": "Piccadilly line; buses to Finsbury Park", "strike_resilience": "Poor", "strike_backup": "Buses to Finsbury Park for National Rail; very slow on strike day", "peak_crowding": "Moderate", "night_tube": true, "cycling_her_to_kx_mins": 0, "cycling_him_to_city_mins": 0, "crime_rate_band": "High", "drug_crime_band": "High", "deprivation_band": "High", "demographic_profile": "Working class", "area_trajectory": "Mixed", "hoodmaps_label": "Students", "owner_occupier_pct": 25, "community_housing_pct": 38, "night_safe": false, "period_garden_flat_u2800": true, "three_bed_u2800": true, "bike_storage": "OK", "indicative_rent": 1900, "council_tax_band_est": "Med (£1,800–£2,400/yr)", "big_park": true, "cycling": 3, "flood_risk": "Low", "heathrow_noise": "None", "amenity_score": 2, "quality_grocers_count": 0, "gym_access": 2, "fit_vs_east_putney": 1, "lat": 51.597, "lng": -0.11, "write_up": "Cheapest rents in the dataset but high crime, high social housing, and not night-safe — fundamentally at odds with what the couple are looking for.", "quick_verdict": "Skip — safety and demographics are incompatible with requirements.", "both_u30": true, "her_commute_band": "21–30 min", "him_commute_band": "21–30 min", "rent_band": "Under £2,000", "owner_occupier_band": "Low (<30%)", "social_housing": "High", "two_plus_grocers": false, "score": 62.0, "score_tier": "Compromise (50–64)", "status": "Compromise"}, {"area": "Hampton", "postcode": "TW12", "region": "West", "nearest_station": "Hampton", "walk_to_station_mins": 10, "her_kx_mins": 50, "her_changes": 1, "him_city_mins": 55, "him_changes": 2, "line_resilience": "Low", "backup_notes": "SWR only; very limited bus coverage", "strike_resilience": "Good", "strike_backup": "SWR unaffected; onward legs still require tube from Waterloo", "peak_crowding": "Comfortable", "night_tube": false, "cycling_her_to_kx_mins": 0, "cycling_him_to_city_mins": 0, "crime_rate_band": "Low", "drug_crime_band": "Low", "deprivation_band": "Low", "demographic_profile": "Established affluent", "area_trajectory": "Peaked", "hoodmaps_label": "Families", "owner_occupier_pct": 72, "community_housing_pct": 7, "night_safe": true, "period_garden_flat_u2800": true, "three_bed_u2800": true, "bike_storage": "Good", "indicative_rent": 2000, "council_tax_band_est": "Med (£1,800–£2,400/yr)", "big_park": true, "cycling": 3, "flood_risk": "High", "heathrow_noise": "None", "amenity_score": 2, "quality_grocers_count": 1, "gym_access": 2, "fit_vs_east_putney": 1, "lat": 51.413, "lng": -0.368, "write_up": "Excellent value and very low crime but 50 min commutes, flood risk along the river, and limited amenities make this a poor fit for inner-city workers.", "quick_verdict": "Rural feel at London rent — commute makes it non-viable.", "both_u30": false, "her_commute_band": "41–50 min", "him_commute_band": "51+ min", "rent_band": "£2,000–£2,400", "owner_occupier_band": "High (>60%)", "social_housing": "Low", "two_plus_grocers": false, "score": 61.2, "score_tier": "Compromise (50–64)", "status": "Compromise"}, {"area": "Surbiton", "postcode": "KT6", "region": "Surrey/Commuter", "nearest_station": "Surbiton", "walk_to_station_mins": 5, "her_kx_mins": 38, "her_changes": 1, "him_city_mins": 45, "him_changes": 2, "line_resilience": "Med", "backup_notes": "SWR to Waterloo; buses to Kingston", "strike_resilience": "Good", "strike_backup": "SWR (National Rail) unaffected by TfL strikes — best feature of this area", "peak_crowding": "Comfortable", "night_tube": false, "cycling_her_to_kx_mins": 0, "cycling_him_to_city_mins": 0, "crime_rate_band": "Low", "drug_crime_band": "Low", "deprivation_band": "Low", "demographic_profile": "Established affluent", "area_trajectory": "Peaked", "hoodmaps_label": "Families", "owner_occupier_pct": 60, "community_housing_pct": 10, "night_safe": true, "period_garden_flat_u2800": true, "three_bed_u2800": true, "bike_storage": "Good", "indicative_rent": 2100, "council_tax_band_est": "High (>£2,400/yr)", "big_park": true, "cycling": 3, "flood_risk": "Low", "heathrow_noise": "None", "amenity_score": 3, "quality_grocers_count": 2, "gym_access": 3, "fit_vs_east_putney": 2, "lat": 51.394, "lng": -0.301, "write_up": "Good value, very low crime, 3-beds in budget, and SWR strike resilience — but 38 min to KX and 45 min to City with changes makes it a commute compromise.", "quick_verdict": "Best Surrey option by commute time; still fails the both-under-30 test.", "both_u30": false, "her_commute_band": "31–40 min", "him_commute_band": "41–50 min", "rent_band": "£2,000–£2,400", "owner_occupier_band": "Med (30–60%)", "social_housing": "Low", "two_plus_grocers": true, "score": 61.2, "score_tier": "Compromise (50–64)", "status": "Compromise"}, {"area": "Hampton Wick", "postcode": "KT1", "region": "Surrey/Commuter", "nearest_station": "Hampton Wick", "walk_to_station_mins": 8, "her_kx_mins": 42, "her_changes": 1, "him_city_mins": 50, "him_changes": 2, "line_resilience": "Low", "backup_notes": "SWR to Waterloo; buses to Kingston", "strike_resilience": "Good", "strike_backup": "SWR to Waterloo unaffected", "peak_crowding": "Comfortable", "night_tube": false, "cycling_her_to_kx_mins": 0, "cycling_him_to_city_mins": 0, "crime_rate_band": "Low", "drug_crime_band": "Low", "deprivation_band": "Low", "demographic_profile": "Established affluent", "area_trajectory": "Peaked", "hoodmaps_label": "Families", "owner_occupier_pct": 62, "community_housing_pct": 10, "night_safe": true, "period_garden_flat_u2800": true, "three_bed_u2800": true, "bike_storage": "Good", "indicative_rent": 2000, "council_tax_band_est": "High (>£2,400/yr)", "big_park": true, "cycling": 3, "flood_risk": "High", "heathrow_noise": "None", "amenity_score": 2, "quality_grocers_count": 1, "gym_access": 2, "fit_vs_east_putney": 1, "lat": 51.413, "lng": -0.308, "write_up": "Lovely riverside location but 42-50 min commutes and flood risk near the Thames make it a firm compromise.", "quick_verdict": "Commute fails; flood risk is a serious concern for garden flats.", "both_u30": false, "her_commute_band": "41–50 min", "him_commute_band": "41–50 min", "rent_band": "£2,000–£2,400", "owner_occupier_band": "High (>60%)", "social_housing": "Low", "two_plus_grocers": false, "score": 61.2, "score_tier": "Compromise (50–64)", "status": "Compromise"}, {"area": "Esher", "postcode": "KT10", "region": "Surrey/Commuter", "nearest_station": "Esher", "walk_to_station_mins": 12, "her_kx_mins": 48, "her_changes": 1, "him_city_mins": 55, "him_changes": 2, "line_resilience": "Low", "backup_notes": "SWR to Waterloo; very limited local transport", "strike_resilience": "Good", "strike_backup": "SWR unaffected; main selling point on strike days", "peak_crowding": "Comfortable", "night_tube": false, "cycling_her_to_kx_mins": 0, "cycling_him_to_city_mins": 0, "crime_rate_band": "Low", "drug_crime_band": "Low", "deprivation_band": "Low", "demographic_profile": "Established affluent", "area_trajectory": "Peaked", "hoodmaps_label": "Rich", "owner_occupier_pct": 74, "community_housing_pct": 5, "night_safe": true, "period_garden_flat_u2800": true, "three_bed_u2800": true, "bike_storage": "Good", "indicative_rent": 2100, "council_tax_band_est": "High (>£2,400/yr)", "big_park": true, "cycling": 2, "flood_risk": "Low", "heathrow_noise": "None", "amenity_score": 2, "quality_grocers_count": 1, "gym_access": 2, "fit_vs_east_putney": 1, "lat": 51.368, "lng": -0.37, "write_up": "Extremely safe and affluent with space, but 48+ min commutes are simply too long for daily use to both offices.", "quick_verdict": "Consider only with 3+ WFH days per week.", "both_u30": false, "her_commute_band": "41–50 min", "him_commute_band": "51+ min", "rent_band": "£2,000–£2,400", "owner_occupier_band": "High (>60%)", "social_housing": "Low", "two_plus_grocers": false, "score": 61.2, "score_tier": "Compromise (50–64)", "status": "Compromise"}, {"area": "Weybridge", "postcode": "KT13", "region": "Surrey/Commuter", "nearest_station": "Weybridge", "walk_to_station_mins": 7, "her_kx_mins": 52, "her_changes": 1, "him_city_mins": 60, "him_changes": 2, "line_resilience": "Low", "backup_notes": "SWR to Waterloo; car-dependent locally", "strike_resilience": "Good", "strike_backup": "SWR unaffected — ironically the best transport feature of living here", "peak_crowding": "Comfortable", "night_tube": false, "cycling_her_to_kx_mins": 0, "cycling_him_to_city_mins": 0, "crime_rate_band": "Low", "drug_crime_band": "Low", "deprivation_band": "Low", "demographic_profile": "Established affluent", "area_trajectory": "Peaked", "hoodmaps_label": "Rich", "owner_occupier_pct": 76, "community_housing_pct": 5, "night_safe": true, "period_garden_flat_u2800": true, "three_bed_u2800": true, "bike_storage": "Good", "indicative_rent": 2000, "council_tax_band_est": "High (>£2,400/yr)", "big_park": true, "cycling": 2, "flood_risk": "Med", "heathrow_noise": "None", "amenity_score": 2, "quality_grocers_count": 1, "gym_access": 2, "fit_vs_east_putney": 1, "lat": 51.37, "lng": -0.462, "write_up": "Beautiful Surrey commuter town but 52-60 min commutes with changes make it non-viable for daily office attendance.", "quick_verdict": "Strong WFH base; not viable for 5-day commuting.", "both_u30": false, "her_commute_band": "51+ min", "him_commute_band": "51+ min", "rent_band": "£2,000–£2,400", "owner_occupier_band": "High (>60%)", "social_housing": "Low", "two_plus_grocers": false, "score": 61.2, "score_tier": "Compromise (50–64)", "status": "Compromise"}, {"area": "Raynes Park", "postcode": "SW20", "region": "SW/South", "nearest_station": "Raynes Park", "walk_to_station_mins": 8, "her_kx_mins": 35, "her_changes": 1, "him_city_mins": 42, "him_changes": 1, "line_resilience": "Low", "backup_notes": "SWR to Waterloo; limited bus coverage", "strike_resilience": "Good", "strike_backup": "SWR (National Rail) unaffected by TfL strikes", "peak_crowding": "Comfortable", "night_tube": false, "cycling_her_to_kx_mins": 0, "cycling_him_to_city_mins": 0, "crime_rate_band": "Low", "drug_crime_band": "Low", "deprivation_band": "Low", "demographic_profile": "Established affluent", "area_trajectory": "Peaked", "hoodmaps_label": "Families", "owner_occupier_pct": 65, "community_housing_pct": 9, "night_safe": true, "period_garden_flat_u2800": true, "three_bed_u2800": true, "bike_storage": "Good", "indicative_rent": 2200, "council_tax_band_est": "Med (£1,800–£2,400/yr)", "big_park": true, "cycling": 2, "flood_risk": "Low", "heathrow_noise": "None", "amenity_score": 2, "quality_grocers_count": 1, "gym_access": 2, "fit_vs_east_putney": 3, "lat": 51.407, "lng": -0.221, "write_up": "Low crime, good space and occasional 3-beds under budget, but commutes exceed 35 min for both and amenities are suburban.", "quick_verdict": "Move here only if a house with garden and low crime outweigh commute time.", "both_u30": false, "her_commute_band": "31–40 min", "him_commute_band": "41–50 min", "rent_band": "£2,000–£2,400", "owner_occupier_band": "High (>60%)", "social_housing": "Low", "two_plus_grocers": false, "score": 60.1, "score_tier": "Compromise (50–64)", "status": "Compromise"}, {"area": "Earlsfield", "postcode": "SW18", "region": "SW/South", "nearest_station": "Earlsfield", "walk_to_station_mins": 7, "her_kx_mins": 30, "her_changes": 1, "him_city_mins": 26, "him_changes": 1, "line_resilience": "Med", "backup_notes": "SWR to Waterloo; Northern line or W&C to Bank for City", "strike_resilience": "Good", "strike_backup": "SWR (National Rail) unaffected by TfL tube strikes; Waterloo & City line often runs", "peak_crowding": "Comfortable", "night_tube": false, "cycling_her_to_kx_mins": 0, "cycling_him_to_city_mins": 0, "crime_rate_band": "Low", "drug_crime_band": "Low", "deprivation_band": "Low", "demographic_profile": "Established affluent", "area_trajectory": "Gentrifying", "hoodmaps_label": "Families", "owner_occupier_pct": 50, "community_housing_pct": 14, "night_safe": true, "period_garden_flat_u2800": true, "three_bed_u2800": false, "bike_storage": "Good", "indicative_rent": 2400, "council_tax_band_est": "Med (£1,800–£2,400/yr)", "big_park": true, "cycling": 3, "flood_risk": "Low", "heathrow_noise": "None", "amenity_score": 3, "quality_grocers_count": 1, "gym_access": 3, "fit_vs_east_putney": 4, "lat": 51.444, "lng": -0.186, "write_up": "Quiet, leafy, underrated — good garden flat stock and strike-proof SWR commute; him at 26 min is a genuine win.", "quick_verdict": "Strong sleeper pick if strike resilience and value matter; underappreciated.", "both_u30": true, "her_commute_band": "21–30 min", "him_commute_band": "21–30 min", "rent_band": "£2,400–£2,800", "owner_occupier_band": "Med (30–60%)", "social_housing": "Low", "two_plus_grocers": false, "score": 59.9, "score_tier": "Compromise (50–64)", "status": "Compromise"}, {"area": "Herne Hill", "postcode": "SE24", "region": "SW/South", "nearest_station": "Herne Hill", "walk_to_station_mins": 7, "her_kx_mins": 30, "her_changes": 1, "him_city_mins": 25, "him_changes": 1, "line_resilience": "Med", "backup_notes": "Thameslink at same station; buses to Brixton Victoria line", "strike_resilience": "Good", "strike_backup": "Thameslink from Herne Hill direct to City Thameslink; buses to Brixton", "peak_crowding": "Comfortable", "night_tube": false, "cycling_her_to_kx_mins": 0, "cycling_him_to_city_mins": 0, "crime_rate_band": "Low", "drug_crime_band": "Low", "deprivation_band": "Low", "demographic_profile": "Established affluent", "area_trajectory": "Peaked", "hoodmaps_label": "Hipsters", "owner_occupier_pct": 44, "community_housing_pct": 16, "night_safe": true, "period_garden_flat_u2800": true, "three_bed_u2800": false, "bike_storage": "Good", "indicative_rent": 2400, "council_tax_band_est": "Med (£1,800–£2,400/yr)", "big_park": true, "cycling": 4, "flood_risk": "Low", "heathrow_noise": "None", "amenity_score": 4, "quality_grocers_count": 2, "gym_access": 3, "fit_vs_east_putney": 5, "lat": 51.454, "lng": -0.104, "write_up": "Brilliantly leafy and low-crime with excellent Thameslink strike backup; Brockwell Park is outstanding for weekends; good café culture on Half Moon Lane.", "quick_verdict": "Move here for the park, the village feel, and strike-proof City commute; her KX is tight at 30 min.", "both_u30": true, "her_commute_band": "21–30 min", "him_commute_band": "21–30 min", "rent_band": "£2,400–£2,800", "owner_occupier_band": "Med (30–60%)", "social_housing": "Med", "two_plus_grocers": true, "score": 59.2, "score_tier": "Compromise (50–64)", "status": "Compromise"}, {"area": "Alexandra Palace", "postcode": "N22", "region": "North", "nearest_station": "Alexandra Palace", "walk_to_station_mins": 8, "her_kx_mins": 35, "her_changes": 1, "him_city_mins": 35, "him_changes": 1, "line_resilience": "Low", "backup_notes": "Thameslink from Alexandra Palace; Piccadilly from Wood Green", "strike_resilience": "Good", "strike_backup": "Thameslink from Alexandra Palace station runs on TfL strikes — good backup", "peak_crowding": "Comfortable", "night_tube": false, "cycling_her_to_kx_mins": 0, "cycling_him_to_city_mins": 0, "crime_rate_band": "Low", "drug_crime_band": "Low", "deprivation_band": "Low", "demographic_profile": "Gentrifying", "area_trajectory": "Gentrifying", "hoodmaps_label": "Families", "owner_occupier_pct": 42, "community_housing_pct": 18, "night_safe": true, "period_garden_flat_u2800": true, "three_bed_u2800": true, "bike_storage": "Good", "indicative_rent": 2100, "council_tax_band_est": "Med (£1,800–£2,400/yr)", "big_park": true, "cycling": 3, "flood_risk": "Low", "heathrow_noise": "None", "amenity_score": 3, "quality_grocers_count": 1, "gym_access": 3, "fit_vs_east_putney": 3, "lat": 51.593, "lng": -0.128, "write_up": "Surprisingly good Thameslink strike resilience and views from the hill; 35-min commutes with 1 change each way keeps it out of the top tier.", "quick_verdict": "Good value with strike resilience; move here if you accept 35-min commutes.", "both_u30": false, "her_commute_band": "31–40 min", "him_commute_band": "31–40 min", "rent_band": "£2,000–£2,400", "owner_occupier_band": "Med (30–60%)", "social_housing": "Med", "two_plus_grocers": false, "score": 59.2, "score_tier": "Compromise (50–64)", "status": "Compromise"}, {"area": "Kingston", "postcode": "KT1", "region": "Surrey/Commuter", "nearest_station": "Kingston", "walk_to_station_mins": 5, "her_kx_mins": 40, "her_changes": 1, "him_city_mins": 47, "him_changes": 2, "line_resilience": "Med", "backup_notes": "SWR to Waterloo; buses to Surbiton", "strike_resilience": "Good", "strike_backup": "SWR unaffected; direct to Waterloo", "peak_crowding": "Comfortable", "night_tube": false, "cycling_her_to_kx_mins": 0, "cycling_him_to_city_mins": 0, "crime_rate_band": "Low", "drug_crime_band": "Low", "deprivation_band": "Low", "demographic_profile": "Established affluent", "area_trajectory": "Peaked", "hoodmaps_label": "Families", "owner_occupier_pct": 58, "community_housing_pct": 12, "night_safe": true, "period_garden_flat_u2800": true, "three_bed_u2800": true, "bike_storage": "Good", "indicative_rent": 2200, "council_tax_band_est": "High (>£2,400/yr)", "big_park": true, "cycling": 3, "flood_risk": "Med", "heathrow_noise": "None", "amenity_score": 3, "quality_grocers_count": 2, "gym_access": 3, "fit_vs_east_putney": 2, "lat": 51.413, "lng": -0.3, "write_up": "Great town centre and riverside, SWR resilience, space for money — but 40 min+ commutes and some flood risk near the Thames.", "quick_verdict": "Good quality of life but commute is too long — compromise at best.", "both_u30": false, "her_commute_band": "31–40 min", "him_commute_band": "41–50 min", "rent_band": "£2,000–£2,400", "owner_occupier_band": "Med (30–60%)", "social_housing": "Low", "two_plus_grocers": true, "score": 59.1, "score_tier": "Compromise (50–64)", "status": "Compromise"}, {"area": "Wanstead", "postcode": "E11", "region": "NE", "nearest_station": "Wanstead", "walk_to_station_mins": 12, "her_kx_mins": 35, "her_changes": 1, "him_city_mins": 28, "him_changes": 1, "line_resilience": "Low", "backup_notes": "Central line only; buses to Leytonstone", "strike_resilience": "Med", "strike_backup": "Overground from Manor Park nearby; buses to Stratford for DLR", "peak_crowding": "Comfortable", "night_tube": true, "cycling_her_to_kx_mins": 0, "cycling_him_to_city_mins": 0, "crime_rate_band": "Low", "drug_crime_band": "Low", "deprivation_band": "Low", "demographic_profile": "Established affluent", "area_trajectory": "Peaked", "hoodmaps_label": "Families", "owner_occupier_pct": 58, "community_housing_pct": 12, "night_safe": true, "period_garden_flat_u2800": true, "three_bed_u2800": true, "bike_storage": "Good", "indicative_rent": 2300, "council_tax_band_est": "Med (£1,800–£2,400/yr)", "big_park": true, "cycling": 3, "flood_risk": "Low", "heathrow_noise": "None", "amenity_score": 3, "quality_grocers_count": 1, "gym_access": 3, "fit_vs_east_putney": 3, "lat": 51.575, "lng": 0.028, "write_up": "Surprisingly affluent and low-crime with good park access; long walk to Central line and 35 min to KX is the main weakness.", "quick_verdict": "Hidden gem for safety and space; commute is 35 min+ which is a compromise.", "both_u30": false, "her_commute_band": "31–40 min", "him_commute_band": "21–30 min", "rent_band": "£2,000–£2,400", "owner_occupier_band": "Med (30–60%)", "social_housing": "Low", "two_plus_grocers": false, "score": 58.1, "score_tier": "Compromise (50–64)", "status": "Compromise"}, {"area": "Hammersmith/Brackenbury", "postcode": "W6", "region": "West", "nearest_station": "Hammersmith", "walk_to_station_mins": 5, "her_kx_mins": 25, "her_changes": 1, "him_city_mins": 30, "him_changes": 1, "line_resilience": "High", "backup_notes": "Piccadilly + District lines; multiple bus routes", "strike_resilience": "Med", "strike_backup": "Buses frequent; cycling feasible along Thames path", "peak_crowding": "Moderate", "night_tube": true, "cycling_her_to_kx_mins": 0, "cycling_him_to_city_mins": 0, "crime_rate_band": "Low", "drug_crime_band": "Low", "deprivation_band": "Low", "demographic_profile": "Established affluent", "area_trajectory": "Peaked", "hoodmaps_label": "Yuppies", "owner_occupier_pct": 40, "community_housing_pct": 22, "night_safe": true, "period_garden_flat_u2800": true, "three_bed_u2800": false, "bike_storage": "Good", "indicative_rent": 2600, "council_tax_band_est": "High (>£2,400/yr)", "big_park": false, "cycling": 4, "flood_risk": "Low", "heathrow_noise": "Med", "amenity_score": 4, "quality_grocers_count": 2, "gym_access": 4, "fit_vs_east_putney": 4, "lat": 51.492, "lng": -0.226, "write_up": "Brackenbury Village is one of London's loveliest pockets with Victorian garden flats; note Heathrow noise on the flight path and high council tax.", "quick_verdict": "Move here for village character and dual-line resilience; accept Heathrow noise and council tax premium.", "both_u30": true, "her_commute_band": "21–30 min", "him_commute_band": "21–30 min", "rent_band": "£2,400–£2,800", "owner_occupier_band": "Med (30–60%)", "social_housing": "Med", "two_plus_grocers": true, "score": 57.3, "score_tier": "Compromise (50–64)", "status": "Compromise"}, {"area": "Barons Court/West Kensington", "postcode": "W14", "region": "West", "nearest_station": "Barons Court", "walk_to_station_mins": 5, "her_kx_mins": 22, "her_changes": 1, "him_city_mins": 28, "him_changes": 1, "line_resilience": "High", "backup_notes": "District + Piccadilly from Earl's Court; buses", "strike_resilience": "Med", "strike_backup": "Buses to Hammersmith for SWR option; frequent bus network", "peak_crowding": "Moderate", "night_tube": true, "cycling_her_to_kx_mins": 0, "cycling_him_to_city_mins": 0, "crime_rate_band": "Low", "drug_crime_band": "Low", "deprivation_band": "Low", "demographic_profile": "Established affluent", "area_trajectory": "Peaked", "hoodmaps_label": "Yuppies", "owner_occupier_pct": 36, "community_housing_pct": 22, "night_safe": true, "period_garden_flat_u2800": true, "three_bed_u2800": false, "bike_storage": "Good", "indicative_rent": 2500, "council_tax_band_est": "High (>£2,400/yr)", "big_park": false, "cycling": 3, "flood_risk": "Low", "heathrow_noise": "Low", "amenity_score": 3, "quality_grocers_count": 1, "gym_access": 3, "fit_vs_east_putney": 4, "lat": 51.49, "lng": -0.213, "write_up": "Her 22-min KX commute is a genuine strength; period garden flats exist in the quieter streets; slight Heathrow noise and high council tax are the trade-offs.", "quick_verdict": "Strong for her commute; weaker for him and council tax is high — worth a look.", "both_u30": true, "her_commute_band": "21–30 min", "him_commute_band": "21–30 min", "rent_band": "£2,400–£2,800", "owner_occupier_band": "Med (30–60%)", "social_housing": "Med", "two_plus_grocers": false, "score": 57.1, "score_tier": "Compromise (50–64)", "status": "Compromise"}, {"area": "Teddington", "postcode": "TW11", "region": "West", "nearest_station": "Teddington", "walk_to_station_mins": 10, "her_kx_mins": 48, "her_changes": 1, "him_city_mins": 52, "him_changes": 2, "line_resilience": "Low", "backup_notes": "SWR only; no tube", "strike_resilience": "Good", "strike_backup": "SWR (National Rail) unaffected by TfL strikes", "peak_crowding": "Comfortable", "night_tube": false, "cycling_her_to_kx_mins": 0, "cycling_him_to_city_mins": 0, "crime_rate_band": "Low", "drug_crime_band": "Low", "deprivation_band": "Low", "demographic_profile": "Established affluent", "area_trajectory": "Peaked", "hoodmaps_label": "Families", "owner_occupier_pct": 68, "community_housing_pct": 8, "night_safe": true, "period_garden_flat_u2800": true, "three_bed_u2800": true, "bike_storage": "Good", "indicative_rent": 2400, "council_tax_band_est": "Med (£1,800–£2,400/yr)", "big_park": true, "cycling": 3, "flood_risk": "High", "heathrow_noise": "None", "amenity_score": 3, "quality_grocers_count": 1, "gym_access": 3, "fit_vs_east_putney": 2, "lat": 51.421, "lng": -0.332, "write_up": "Beautiful Thames-side market town with excellent space for money, but 48 min to KX and serious flood risk for any garden flat near the river.", "quick_verdict": "Fails both commute and flood risk — compromise territory.", "both_u30": false, "her_commute_band": "41–50 min", "him_commute_band": "51+ min", "rent_band": "£2,400–£2,800", "owner_occupier_band": "High (>60%)", "social_housing": "Low", "two_plus_grocers": false, "score": 57.1, "score_tier": "Compromise (50–64)", "status": "Compromise"}, {"area": "Twickenham", "postcode": "TW1", "region": "West", "nearest_station": "Twickenham", "walk_to_station_mins": 7, "her_kx_mins": 45, "her_changes": 1, "him_city_mins": 50, "him_changes": 2, "line_resilience": "Med", "backup_notes": "SWR to Waterloo; buses to Richmond for District", "strike_resilience": "Good", "strike_backup": "SWR direct to Waterloo unaffected by TfL strikes", "peak_crowding": "Comfortable", "night_tube": false, "cycling_her_to_kx_mins": 0, "cycling_him_to_city_mins": 0, "crime_rate_band": "Low", "drug_crime_band": "Low", "deprivation_band": "Low", "demographic_profile": "Established affluent", "area_trajectory": "Peaked", "hoodmaps_label": "Families", "owner_occupier_pct": 65, "community_housing_pct": 10, "night_safe": true, "period_garden_flat_u2800": true, "three_bed_u2800": true, "bike_storage": "Good", "indicative_rent": 2300, "council_tax_band_est": "Med (£1,800–£2,400/yr)", "big_park": true, "cycling": 3, "flood_risk": "High", "heathrow_noise": "Low", "amenity_score": 3, "quality_grocers_count": 1, "gym_access": 3, "fit_vs_east_putney": 2, "lat": 51.449, "lng": -0.336, "write_up": "Good value, low crime, and excellent SWR resilience but 45 min+ commutes and flood risk zones for riverside garden flats.", "quick_verdict": "Better for weekend life than weekday commutes — compromise.", "both_u30": false, "her_commute_band": "41–50 min", "him_commute_band": "41–50 min", "rent_band": "£2,000–£2,400", "owner_occupier_band": "High (>60%)", "social_housing": "Low", "two_plus_grocers": false, "score": 57.1, "score_tier": "Compromise (50–64)", "status": "Compromise"}, {"area": "Shepherd's Bush", "postcode": "W12", "region": "West", "nearest_station": "Shepherd's Bush (Central)", "walk_to_station_mins": 5, "her_kx_mins": 22, "her_changes": 1, "him_city_mins": 28, "him_changes": 1, "line_resilience": "High", "backup_notes": "Central + Overground; multiple bus routes", "strike_resilience": "Med", "strike_backup": "Overground to Stratford then DLR; buses to Hammersmith", "peak_crowding": "Moderate", "night_tube": true, "cycling_her_to_kx_mins": 0, "cycling_him_to_city_mins": 0, "crime_rate_band": "Med", "drug_crime_band": "Med", "deprivation_band": "Med", "demographic_profile": "Gentrifying", "area_trajectory": "Gentrifying", "hoodmaps_label": "Hipsters", "owner_occupier_pct": 30, "community_housing_pct": 28, "night_safe": true, "period_garden_flat_u2800": true, "three_bed_u2800": false, "bike_storage": "Good", "indicative_rent": 2400, "council_tax_band_est": "High (>£2,400/yr)", "big_park": false, "cycling": 3, "flood_risk": "Low", "heathrow_noise": "Med", "amenity_score": 4, "quality_grocers_count": 1, "gym_access": 4, "fit_vs_east_putney": 4, "lat": 51.505, "lng": -0.226, "write_up": "Good commute times via Central line but higher social housing, Heathrow noise, and no big park; improving fast around Westfield end.", "quick_verdict": "Reasonable commute at lower cost; accept more urban mixed character than the couple are used to.", "both_u30": true, "her_commute_band": "21–30 min", "him_commute_band": "21–30 min", "rent_band": "£2,400–£2,800", "owner_occupier_band": "Med (30–60%)", "social_housing": "Med", "two_plus_grocers": false, "score": 56.2, "score_tier": "Compromise (50–64)", "status": "Compromise"}, {"area": "Acton/Ealing", "postcode": "W3/W5", "region": "West", "nearest_station": "Acton Town", "walk_to_station_mins": 8, "her_kx_mins": 30, "her_changes": 1, "him_city_mins": 38, "him_changes": 2, "line_resilience": "Med", "backup_notes": "Piccadilly + District; Elizabeth line from Ealing Broadway", "strike_resilience": "Med", "strike_backup": "Elizabeth line from Ealing Broadway (National Rail-operated) unaffected by TfL strikes", "peak_crowding": "Moderate", "night_tube": true, "cycling_her_to_kx_mins": 0, "cycling_him_to_city_mins": 0, "crime_rate_band": "Low", "drug_crime_band": "Low", "deprivation_band": "Low", "demographic_profile": "Established affluent", "area_trajectory": "Gentrifying", "hoodmaps_label": "Families", "owner_occupier_pct": 48, "community_housing_pct": 18, "night_safe": true, "period_garden_flat_u2800": true, "three_bed_u2800": true, "bike_storage": "Good", "indicative_rent": 2200, "council_tax_band_est": "Med (£1,800–£2,400/yr)", "big_park": true, "cycling": 3, "flood_risk": "Low", "heathrow_noise": "High", "amenity_score": 3, "quality_grocers_count": 1, "gym_access": 3, "fit_vs_east_putney": 3, "lat": 51.513, "lng": -0.28, "write_up": "Affordable with occasional 3-beds in budget and Elizabeth line resilience, but directly under Heathrow flight path — garden enjoyment severely compromised.", "quick_verdict": "Skip — Heathrow noise makes the garden irrelevant.", "both_u30": false, "her_commute_band": "21–30 min", "him_commute_band": "31–40 min", "rent_band": "£2,000–£2,400", "owner_occupier_band": "Med (30–60%)", "social_housing": "Med", "two_plus_grocers": false, "score": 56.1, "score_tier": "Compromise (50–64)", "status": "Compromise"}, {"area": "Muswell Hill", "postcode": "N10", "region": "North", "nearest_station": "Alexandra Palace (0.9mi walk)", "walk_to_station_mins": 15, "her_kx_mins": 48, "her_changes": 1, "him_city_mins": 45, "him_changes": 1, "line_resilience": "Low", "backup_notes": "Bus to Wood Green or Alexandra Palace; no tube", "strike_resilience": "Poor", "strike_backup": "Buses to Wood Green for Piccadilly; very slow", "peak_crowding": "Comfortable", "night_tube": false, "cycling_her_to_kx_mins": 0, "cycling_him_to_city_mins": 0, "crime_rate_band": "Low", "drug_crime_band": "Low", "deprivation_band": "Low", "demographic_profile": "Established affluent", "area_trajectory": "Peaked", "hoodmaps_label": "Families", "owner_occupier_pct": 60, "community_housing_pct": 10, "night_safe": true, "period_garden_flat_u2800": true, "three_bed_u2800": true, "bike_storage": "Good", "indicative_rent": 2400, "council_tax_band_est": "Med (£1,800–£2,400/yr)", "big_park": true, "cycling": 2, "flood_risk": "Low", "heathrow_noise": "None", "amenity_score": 3, "quality_grocers_count": 1, "gym_access": 3, "fit_vs_east_putney": 2, "lat": 51.59, "lng": -0.142, "write_up": "Beautiful Edwardian suburb but bus-first commute means 45-48 min to both offices with zero strike resilience — a definitive fail on the primary criterion.", "quick_verdict": "Skip entirely — commute fails, no tube station.", "both_u30": false, "her_commute_band": "41–50 min", "him_commute_band": "41–50 min", "rent_band": "£2,400–£2,800", "owner_occupier_band": "Med (30–60%)", "social_housing": "Low", "two_plus_grocers": false, "score": 56.1, "score_tier": "Compromise (50–64)", "status": "Compromise"}, {"area": "Streatham", "postcode": "SW16", "region": "SW/South", "nearest_station": "Streatham", "walk_to_station_mins": 7, "her_kx_mins": 35, "her_changes": 1, "him_city_mins": 32, "him_changes": 1, "line_resilience": "Med", "backup_notes": "Thameslink (City Thameslink for him); buses to Brixton", "strike_resilience": "Good", "strike_backup": "Thameslink from Streatham runs on TfL strikes — excellent for him", "peak_crowding": "Comfortable", "night_tube": false, "cycling_her_to_kx_mins": 0, "cycling_him_to_city_mins": 0, "crime_rate_band": "Med", "drug_crime_band": "Med", "deprivation_band": "Med", "demographic_profile": "Gentrifying", "area_trajectory": "Gentrifying", "hoodmaps_label": "Hipsters", "owner_occupier_pct": 36, "community_housing_pct": 25, "night_safe": true, "period_garden_flat_u2800": true, "three_bed_u2800": true, "bike_storage": "Good", "indicative_rent": 2100, "council_tax_band_est": "Med (£1,800–£2,400/yr)", "big_park": true, "cycling": 3, "flood_risk": "Low", "heathrow_noise": "None", "amenity_score": 3, "quality_grocers_count": 1, "gym_access": 3, "fit_vs_east_putney": 4, "lat": 51.427, "lng": -0.124, "write_up": "Biggest gardens and most space for the money in SW London; his commute via Thameslink survives tube strikes; her KX journey is 35 min which is the main weakness.", "quick_verdict": "Move here if space and value trump commute perfection; Thameslink strike resilience is a genuine advantage.", "both_u30": false, "her_commute_band": "31–40 min", "him_commute_band": "31–40 min", "rent_band": "£2,000–£2,400", "owner_occupier_band": "Med (30–60%)", "social_housing": "Med", "two_plus_grocers": false, "score": 55.2, "score_tier": "Compromise (50–64)", "status": "Compromise"}, {"area": "Streatham Hill", "postcode": "SW2", "region": "SW/South", "nearest_station": "Streatham Hill", "walk_to_station_mins": 5, "her_kx_mins": 32, "her_changes": 1, "him_city_mins": 30, "him_changes": 1, "line_resilience": "Med", "backup_notes": "Buses to Brixton Victoria line; Streatham for Thameslink", "strike_resilience": "Med", "strike_backup": "Short bus to Brixton for SWR via Clapham Junction; Thameslink at Streatham", "peak_crowding": "Comfortable", "night_tube": false, "cycling_her_to_kx_mins": 0, "cycling_him_to_city_mins": 0, "crime_rate_band": "Med", "drug_crime_band": "Med", "deprivation_band": "Med", "demographic_profile": "Gentrifying", "area_trajectory": "Gentrifying", "hoodmaps_label": "Hipsters", "owner_occupier_pct": 30, "community_housing_pct": 28, "night_safe": true, "period_garden_flat_u2800": true, "three_bed_u2800": true, "bike_storage": "Good", "indicative_rent": 2000, "council_tax_band_est": "Med (£1,800–£2,400/yr)", "big_park": true, "cycling": 3, "flood_risk": "Low", "heathrow_noise": "None", "amenity_score": 3, "quality_grocers_count": 1, "gym_access": 3, "fit_vs_east_putney": 3, "lat": 51.439, "lng": -0.129, "write_up": "Lowest rents in the SW tier with big Victorian houses; higher social housing concentration than Streatham; commutes just pass the 30 min threshold.", "quick_verdict": "Max space for minimum money; accept more mixed surroundings and slightly longer commute.", "both_u30": false, "her_commute_band": "31–40 min", "him_commute_band": "21–30 min", "rent_band": "£2,000–£2,400", "owner_occupier_band": "Med (30–60%)", "social_housing": "Med", "two_plus_grocers": false, "score": 54.2, "score_tier": "Compromise (50–64)", "status": "Compromise"}, {"area": "Stoke Newington", "postcode": "N16", "region": "North", "nearest_station": "Stoke Newington (Overground)", "walk_to_station_mins": 10, "her_kx_mins": 30, "her_changes": 1, "him_city_mins": 22, "him_changes": 1, "line_resilience": "Low", "backup_notes": "Overground only; buses to Highbury or Finsbury Park", "strike_resilience": "Poor", "strike_backup": "Buses to Finsbury Park for Victoria/Piccadilly; unreliable", "peak_crowding": "Moderate", "night_tube": false, "cycling_her_to_kx_mins": 35, "cycling_him_to_city_mins": 30, "crime_rate_band": "Med", "drug_crime_band": "Med", "deprivation_band": "Med", "demographic_profile": "Gentrifying", "area_trajectory": "Gentrifying", "hoodmaps_label": "Hipsters", "owner_occupier_pct": 34, "community_housing_pct": 24, "night_safe": true, "period_garden_flat_u2800": true, "three_bed_u2800": false, "bike_storage": "Good", "indicative_rent": 2300, "council_tax_band_est": "Med (£1,800–£2,400/yr)", "big_park": true, "cycling": 5, "flood_risk": "Low", "heathrow_noise": "None", "amenity_score": 4, "quality_grocers_count": 1, "gym_access": 3, "fit_vs_east_putney": 4, "lat": 51.563, "lng": -0.074, "write_up": "Brilliant village character, excellent cycling, and affordable garden flats; Overground-only means poor strike resilience, though cycling to both offices is genuinely feasible on strike days.", "quick_verdict": "Move here if you're comfortable cycling on strike days; skip if you need reliable transit backup.", "both_u30": true, "her_commute_band": "21–30 min", "him_commute_band": "21–30 min", "rent_band": "£2,000–£2,400", "owner_occupier_band": "Med (30–60%)", "social_housing": "Med", "two_plus_grocers": false, "score": 53.6, "score_tier": "Compromise (50–64)", "status": "Compromise"}, {"area": "Belsize Park", "postcode": "NW3", "region": "North", "nearest_station": "Belsize Park", "walk_to_station_mins": 5, "her_kx_mins": 17, "her_changes": 0, "him_city_mins": 25, "him_changes": 1, "line_resilience": "Med", "backup_notes": "Northern line; bus to Kentish Town for Thameslink", "strike_resilience": "Med", "strike_backup": "Bus to Kentish Town for Thameslink; 15-min walk is an option", "peak_crowding": "Comfortable", "night_tube": true, "cycling_her_to_kx_mins": 30, "cycling_him_to_city_mins": 0, "crime_rate_band": "Low", "drug_crime_band": "Low", "deprivation_band": "Low", "demographic_profile": "Established affluent", "area_trajectory": "Peaked", "hoodmaps_label": "Rich", "owner_occupier_pct": 44, "community_housing_pct": 14, "night_safe": true, "period_garden_flat_u2800": false, "three_bed_u2800": false, "bike_storage": "Good", "indicative_rent": 3000, "council_tax_band_est": "Med (£1,800–£2,400/yr)", "big_park": true, "cycling": 3, "flood_risk": "Low", "heathrow_noise": "None", "amenity_score": 4, "quality_grocers_count": 2, "gym_access": 4, "fit_vs_east_putney": 4, "lat": 51.547, "lng": -0.165, "write_up": "Exceptional safety and Hampstead Heath access; excellent commute; but £3,000+ for a 2-bed puts it above budget and private gardens are rare at this price.", "quick_verdict": "Great area but over budget — stretch if you find an unusual deal.", "both_u30": true, "her_commute_band": "≤20 min", "him_commute_band": "21–30 min", "rent_band": "Over £2,800", "owner_occupier_band": "Med (30–60%)", "social_housing": "Low", "two_plus_grocers": true, "score": 46.4, "score_tier": "Weak fit (<50)", "status": "Compromise"}, {"area": "Wimbledon", "postcode": "SW19", "region": "SW/South", "nearest_station": "Wimbledon", "walk_to_station_mins": 5, "her_kx_mins": 30, "her_changes": 1, "him_city_mins": 38, "him_changes": 1, "line_resilience": "Med", "backup_notes": "SWR to Waterloo; District line backup", "strike_resilience": "Good", "strike_backup": "SWR to Waterloo runs on TfL strikes; good fallback", "peak_crowding": "Comfortable", "night_tube": false, "cycling_her_to_kx_mins": 0, "cycling_him_to_city_mins": 0, "crime_rate_band": "Low", "drug_crime_band": "Low", "deprivation_band": "Low", "demographic_profile": "Established affluent", "area_trajectory": "Peaked", "hoodmaps_label": "Rich", "owner_occupier_pct": 60, "community_housing_pct": 12, "night_safe": true, "period_garden_flat_u2800": true, "three_bed_u2800": false, "bike_storage": "Good", "indicative_rent": 2700, "council_tax_band_est": "Med (£1,800–£2,400/yr)", "big_park": true, "cycling": 3, "flood_risk": "Low", "heathrow_noise": "None", "amenity_score": 4, "quality_grocers_count": 2, "gym_access": 4, "fit_vs_east_putney": 4, "lat": 51.421, "lng": -0.207, "write_up": "Excellent SWR strike resilience and good park access; his City commute at 38 min is the main weakness; leafy with high owner-occupier making it stable and safe.", "quick_verdict": "Move here if strike resilience and leafiness matter more than his commute time.", "both_u30": false, "her_commute_band": "21–30 min", "him_commute_band": "31–40 min", "rent_band": "£2,400–£2,800", "owner_occupier_band": "Med (30–60%)", "social_housing": "Low", "two_plus_grocers": true, "score": 44.7, "score_tier": "Weak fit (<50)", "status": "Compromise"}, {"area": "Dartmouth Park", "postcode": "NW5", "region": "North", "nearest_station": "Tufnell Park", "walk_to_station_mins": 10, "her_kx_mins": 20, "her_changes": 0, "him_city_mins": 25, "him_changes": 1, "line_resilience": "Med", "backup_notes": "Bus to Kentish Town for Thameslink or Northern", "strike_resilience": "Med", "strike_backup": "10-min walk to Kentish Town for Thameslink — good indirect fallback", "peak_crowding": "Moderate", "night_tube": true, "cycling_her_to_kx_mins": 30, "cycling_him_to_city_mins": 0, "crime_rate_band": "Low", "drug_crime_band": "Low", "deprivation_band": "Low", "demographic_profile": "Established affluent", "area_trajectory": "Peaked", "hoodmaps_label": "Rich", "owner_occupier_pct": 52, "community_housing_pct": 14, "night_safe": true, "period_garden_flat_u2800": false, "three_bed_u2800": false, "bike_storage": "Good", "indicative_rent": 2800, "council_tax_band_est": "Med (£1,800–£2,400/yr)", "big_park": true, "cycling": 3, "flood_risk": "Low", "heathrow_noise": "None", "amenity_score": 3, "quality_grocers_count": 1, "gym_access": 3, "fit_vs_east_putney": 5, "lat": 51.558, "lng": -0.143, "write_up": "One of London's most desirable hidden pockets — very low crime, exceptional housing stock, at budget ceiling; garden flats are rare and expensive at £2,800+.", "quick_verdict": "Move here if you find a garden flat at budget; otherwise too expensive for the spec.", "both_u30": true, "her_commute_band": "≤20 min", "him_commute_band": "21–30 min", "rent_band": "£2,400–£2,800", "owner_occupier_band": "Med (30–60%)", "social_housing": "Low", "two_plus_grocers": false, "score": 44.4, "score_tier": "Weak fit (<50)", "status": "Compromise"}, {"area": "Oxshott", "postcode": "KT22", "region": "Surrey/Commuter", "nearest_station": "Oxshott", "walk_to_station_mins": 15, "her_kx_mins": 55, "her_changes": 1, "him_city_mins": 63, "him_changes": 2, "line_resilience": "Low", "backup_notes": "SWR to Waterloo; very car-dependent", "strike_resilience": "Good", "strike_backup": "SWR unaffected; 55 min journey still", "peak_crowding": "Comfortable", "night_tube": false, "cycling_her_to_kx_mins": 0, "cycling_him_to_city_mins": 0, "crime_rate_band": "Low", "drug_crime_band": "Low", "deprivation_band": "Low", "demographic_profile": "Established affluent", "area_trajectory": "Peaked", "hoodmaps_label": "Rich", "owner_occupier_pct": 82, "community_housing_pct": 3, "night_safe": true, "period_garden_flat_u2800": false, "three_bed_u2800": true, "bike_storage": "Good", "indicative_rent": 2200, "council_tax_band_est": "High (>£2,400/yr)", "big_park": true, "cycling": 1, "flood_risk": "Low", "heathrow_noise": "None", "amenity_score": 1, "quality_grocers_count": 0, "gym_access": 1, "fit_vs_east_putney": 1, "lat": 51.338, "lng": -0.368, "write_up": "Extremely wealthy, very safe, no crime — but 55+ min commutes and rural isolation are incompatible with these jobs.", "quick_verdict": "Definitive no — include only to show why Surrey far-out fails.", "both_u30": false, "her_commute_band": "51+ min", "him_commute_band": "51+ min", "rent_band": "£2,000–£2,400", "owner_occupier_band": "High (>60%)", "social_housing": "Low", "two_plus_grocers": false, "score": 43.8, "score_tier": "Weak fit (<50)", "status": "Compromise"}, {"area": "Hampstead", "postcode": "NW3", "region": "North", "nearest_station": "Hampstead", "walk_to_station_mins": 7, "her_kx_mins": 20, "her_changes": 0, "him_city_mins": 28, "him_changes": 1, "line_resilience": "Med", "backup_notes": "Northern line; Overground at Hampstead Heath", "strike_resilience": "Med", "strike_backup": "Overground at Hampstead Heath to Gospel Oak; Thameslink via Kentish Town", "peak_crowding": "Comfortable", "night_tube": true, "cycling_her_to_kx_mins": 35, "cycling_him_to_city_mins": 0, "crime_rate_band": "Low", "drug_crime_band": "Low", "deprivation_band": "Low", "demographic_profile": "Established affluent", "area_trajectory": "Peaked", "hoodmaps_label": "Rich", "owner_occupier_pct": 50, "community_housing_pct": 12, "night_safe": true, "period_garden_flat_u2800": false, "three_bed_u2800": false, "bike_storage": "Good", "indicative_rent": 3200, "council_tax_band_est": "Med (£1,800–£2,400/yr)", "big_park": true, "cycling": 3, "flood_risk": "Low", "heathrow_noise": "None", "amenity_score": 4, "quality_grocers_count": 2, "gym_access": 3, "fit_vs_east_putney": 3, "lat": 51.556, "lng": -0.178, "write_up": "London's most desirable village — but £3,200+ for a 2-bed is well beyond budget; private gardens are garden-square access only at this price point.", "quick_verdict": "Aspirational only — revisit when budget is £3,500+.", "both_u30": true, "her_commute_band": "≤20 min", "him_commute_band": "21–30 min", "rent_band": "Over £2,800", "owner_occupier_band": "Med (30–60%)", "social_housing": "Low", "two_plus_grocers": true, "score": 43.5, "score_tier": "Weak fit (<50)", "status": "Compromise"}, {"area": "Wandsworth Town", "postcode": "SW18", "region": "SW/South", "nearest_station": "Wandsworth Town", "walk_to_station_mins": 5, "her_kx_mins": 33, "her_changes": 1, "him_city_mins": 36, "him_changes": 2, "line_resilience": "Low", "backup_notes": "SWR to Waterloo; City leg via Northern Bank or W&C", "strike_resilience": "Med", "strike_backup": "SWR unaffected; City still needs tube from Waterloo", "peak_crowding": "Comfortable", "night_tube": false, "cycling_her_to_kx_mins": 0, "cycling_him_to_city_mins": 0, "crime_rate_band": "Low", "drug_crime_band": "Low", "deprivation_band": "Low", "demographic_profile": "Established affluent", "area_trajectory": "Gentrifying", "hoodmaps_label": "Yuppies", "owner_occupier_pct": 46, "community_housing_pct": 15, "night_safe": true, "period_garden_flat_u2800": true, "three_bed_u2800": false, "bike_storage": "Good", "indicative_rent": 2450, "council_tax_band_est": "Med (£1,800–£2,400/yr)", "big_park": true, "cycling": 3, "flood_risk": "Low", "heathrow_noise": "None", "amenity_score": 3, "quality_grocers_count": 1, "gym_access": 3, "fit_vs_east_putney": 4, "lat": 51.459, "lng": -0.187, "write_up": "Good value garden flats on quiet streets off Bellevue Road; commute is still 30+ min with a change each way.", "quick_verdict": "Solid upgrade on rent; accept the commute trade-off.", "both_u30": false, "her_commute_band": "31–40 min", "him_commute_band": "31–40 min", "rent_band": "£2,400–£2,800", "owner_occupier_band": "Med (30–60%)", "social_housing": "Low", "two_plus_grocers": false, "score": 43.3, "score_tier": "Weak fit (<50)", "status": "Compromise"}, {"area": "Wimbledon Park", "postcode": "SW19", "region": "SW/South", "nearest_station": "Wimbledon Park", "walk_to_station_mins": 7, "her_kx_mins": 32, "her_changes": 1, "him_city_mins": 40, "him_changes": 1, "line_resilience": "Low", "backup_notes": "Bus to Wimbledon for SWR; District line", "strike_resilience": "Poor", "strike_backup": "Bus to Wimbledon then SWR; slow on strike days", "peak_crowding": "Comfortable", "night_tube": false, "cycling_her_to_kx_mins": 0, "cycling_him_to_city_mins": 0, "crime_rate_band": "Low", "drug_crime_band": "Low", "deprivation_band": "Low", "demographic_profile": "Established affluent", "area_trajectory": "Peaked", "hoodmaps_label": "Families", "owner_occupier_pct": 62, "community_housing_pct": 10, "night_safe": true, "period_garden_flat_u2800": true, "three_bed_u2800": false, "bike_storage": "Good", "indicative_rent": 2500, "council_tax_band_est": "Med (£1,800–£2,400/yr)", "big_park": true, "cycling": 3, "flood_risk": "Low", "heathrow_noise": "None", "amenity_score": 3, "quality_grocers_count": 1, "gym_access": 3, "fit_vs_east_putney": 3, "lat": 51.434, "lng": -0.204, "write_up": "Quieter and cheaper than Wimbledon but his 40 min City commute and poor strike resilience make it a compromise.", "quick_verdict": "Skip — Wimbledon itself is better value for the commute difference.", "both_u30": false, "her_commute_band": "31–40 min", "him_commute_band": "31–40 min", "rent_band": "£2,400–£2,800", "owner_occupier_band": "High (>60%)", "social_housing": "Low", "two_plus_grocers": false, "score": 42.8, "score_tier": "Weak fit (<50)", "status": "Compromise"}, {"area": "Highgate", "postcode": "N6", "region": "North", "nearest_station": "Highgate", "walk_to_station_mins": 7, "her_kx_mins": 22, "her_changes": 0, "him_city_mins": 28, "him_changes": 1, "line_resilience": "Med", "backup_notes": "Northern line only; buses to Archway", "strike_resilience": "Poor", "strike_backup": "Buses to Archway then walk/bus onward; slow on strike days", "peak_crowding": "Comfortable", "night_tube": true, "cycling_her_to_kx_mins": 35, "cycling_him_to_city_mins": 0, "crime_rate_band": "Low", "drug_crime_band": "Low", "deprivation_band": "Low", "demographic_profile": "Established affluent", "area_trajectory": "Peaked", "hoodmaps_label": "Rich", "owner_occupier_pct": 55, "community_housing_pct": 10, "night_safe": true, "period_garden_flat_u2800": false, "three_bed_u2800": false, "bike_storage": "Good", "indicative_rent": 2900, "council_tax_band_est": "Med (£1,800–£2,400/yr)", "big_park": true, "cycling": 3, "flood_risk": "Low", "heathrow_noise": "None", "amenity_score": 3, "quality_grocers_count": 1, "gym_access": 3, "fit_vs_east_putney": 4, "lat": 51.571, "lng": -0.147, "write_up": "Stunning Georgian village with good commute but poor strike resilience (Northern line only) and at budget ceiling; private gardens exist but are expensive.", "quick_verdict": "Beautiful but overpriced for the spec; Kentish Town delivers the same commute at lower cost.", "both_u30": true, "her_commute_band": "21–30 min", "him_commute_band": "21–30 min", "rent_band": "Over £2,800", "owner_occupier_band": "Med (30–60%)", "social_housing": "Low", "two_plus_grocers": false, "score": 42.7, "score_tier": "Weak fit (<50)", "status": "Compromise"}, {"area": "Cobham", "postcode": "KT11", "region": "Surrey/Commuter", "nearest_station": "Cobham & Stoke D'Abernon", "walk_to_station_mins": 15, "her_kx_mins": 58, "her_changes": 1, "him_city_mins": 65, "him_changes": 2, "line_resilience": "Low", "backup_notes": "SWR to Waterloo; very limited local transport", "strike_resilience": "Good", "strike_backup": "SWR unaffected; journey is just very long", "peak_crowding": "Comfortable", "night_tube": false, "cycling_her_to_kx_mins": 0, "cycling_him_to_city_mins": 0, "crime_rate_band": "Low", "drug_crime_band": "Low", "deprivation_band": "Low", "demographic_profile": "Established affluent", "area_trajectory": "Peaked", "hoodmaps_label": "Rich", "owner_occupier_pct": 80, "community_housing_pct": 4, "night_safe": true, "period_garden_flat_u2800": false, "three_bed_u2800": true, "bike_storage": "Good", "indicative_rent": 2300, "council_tax_band_est": "High (>£2,400/yr)", "big_park": true, "cycling": 1, "flood_risk": "Low", "heathrow_noise": "None", "amenity_score": 1, "quality_grocers_count": 1, "gym_access": 2, "fit_vs_east_putney": 1, "lat": 51.326, "lng": -0.414, "write_up": "Affluent Surrey village scoring well on safety and space but 58-65 min commutes are a definitive fail for daily office workers.", "quick_verdict": "No — 65 min to City is incompatible with quality of life.", "both_u30": false, "her_commute_band": "51+ min", "him_commute_band": "51+ min", "rent_band": "£2,000–£2,400", "owner_occupier_band": "High (>60%)", "social_housing": "Low", "two_plus_grocers": false, "score": 42.7, "score_tier": "Weak fit (<50)", "status": "Compromise"}, {"area": "Dulwich/East Dulwich", "postcode": "SE22", "region": "SW/South", "nearest_station": "East Dulwich", "walk_to_station_mins": 10, "her_kx_mins": 35, "her_changes": 1, "him_city_mins": 30, "him_changes": 1, "line_resilience": "Low", "backup_notes": "Buses to Brixton or Peckham; no tube nearby", "strike_resilience": "Poor", "strike_backup": "Overground to London Bridge then walk/bus; slow but doable", "peak_crowding": "Comfortable", "night_tube": false, "cycling_her_to_kx_mins": 0, "cycling_him_to_city_mins": 0, "crime_rate_band": "Low", "drug_crime_band": "Low", "deprivation_band": "Low", "demographic_profile": "Established affluent", "area_trajectory": "Peaked", "hoodmaps_label": "Families", "owner_occupier_pct": 56, "community_housing_pct": 14, "night_safe": true, "period_garden_flat_u2800": true, "three_bed_u2800": false, "bike_storage": "Good", "indicative_rent": 2600, "council_tax_band_est": "Med (£1,800–£2,400/yr)", "big_park": true, "cycling": 3, "flood_risk": "Low", "heathrow_noise": "None", "amenity_score": 4, "quality_grocers_count": 2, "gym_access": 3, "fit_vs_east_putney": 4, "lat": 51.451, "lng": -0.087, "write_up": "Genuinely village-like with outstanding Dulwich Park, but bus-first commute means 35 min+ each way with poor strike resilience.", "quick_verdict": "Weekend life is excellent; skip unless you can tolerate the commute weakness.", "both_u30": false, "her_commute_band": "31–40 min", "him_commute_band": "21–30 min", "rent_band": "£2,400–£2,800", "owner_occupier_band": "Med (30–60%)", "social_housing": "Low", "two_plus_grocers": true, "score": 41.8, "score_tier": "Weak fit (<50)", "status": "Compromise"}, {"area": "Crouch End", "postcode": "N8", "region": "North", "nearest_station": "Hornsey (0.8mi walk)", "walk_to_station_mins": 12, "her_kx_mins": 42, "her_changes": 1, "him_city_mins": 38, "him_changes": 1, "line_resilience": "Low", "backup_notes": "Bus-first area; no tube station", "strike_resilience": "Poor", "strike_backup": "Bus to Finsbury Park or Highgate; unreliable and slow", "peak_crowding": "Comfortable", "night_tube": false, "cycling_her_to_kx_mins": 0, "cycling_him_to_city_mins": 0, "crime_rate_band": "Low", "drug_crime_band": "Low", "deprivation_band": "Low", "demographic_profile": "Established affluent", "area_trajectory": "Peaked", "hoodmaps_label": "Families", "owner_occupier_pct": 55, "community_housing_pct": 12, "night_safe": true, "period_garden_flat_u2800": true, "three_bed_u2800": false, "bike_storage": "Good", "indicative_rent": 2600, "council_tax_band_est": "Med (£1,800–£2,400/yr)", "big_park": true, "cycling": 3, "flood_risk": "Low", "heathrow_noise": "None", "amenity_score": 4, "quality_grocers_count": 2, "gym_access": 3, "fit_vs_east_putney": 3, "lat": 51.581, "lng": -0.118, "write_up": "Village atmosphere, low crime and good cafés but no tube station — bus-first commute means 40+ min each way with no strike backup.", "quick_verdict": "Skip — commute fails. Lovely area, wrong jobs for it.", "both_u30": false, "her_commute_band": "41–50 min", "him_commute_band": "31–40 min", "rent_band": "£2,400–£2,800", "owner_occupier_band": "Med (30–60%)", "social_housing": "Low", "two_plus_grocers": true, "score": 41.8, "score_tier": "Weak fit (<50)", "status": "Compromise"}, {"area": "Wandsworth", "postcode": "SW18", "region": "SW/South", "nearest_station": "Wandsworth Town", "walk_to_station_mins": 7, "her_kx_mins": 35, "her_changes": 1, "him_city_mins": 38, "him_changes": 2, "line_resilience": "Low", "backup_notes": "SWR to Waterloo + tube; poor City link", "strike_resilience": "Med", "strike_backup": "SWR to Waterloo OK; City leg still depends on tube", "peak_crowding": "Comfortable", "night_tube": false, "cycling_her_to_kx_mins": 0, "cycling_him_to_city_mins": 0, "crime_rate_band": "Low", "drug_crime_band": "Low", "deprivation_band": "Low", "demographic_profile": "Established affluent", "area_trajectory": "Gentrifying", "hoodmaps_label": "Yuppies", "owner_occupier_pct": 48, "community_housing_pct": 16, "night_safe": true, "period_garden_flat_u2800": true, "three_bed_u2800": false, "bike_storage": "Good", "indicative_rent": 2500, "council_tax_band_est": "Med (£1,800–£2,400/yr)", "big_park": true, "cycling": 3, "flood_risk": "Low", "heathrow_noise": "None", "amenity_score": 3, "quality_grocers_count": 1, "gym_access": 3, "fit_vs_east_putney": 4, "lat": 51.456, "lng": -0.192, "write_up": "Lower rent than Putney with garden flats available, but commute via SWR+tube is still slow for both offices.", "quick_verdict": "Move here if rent savings matter; skip if reliable commute is the priority.", "both_u30": false, "her_commute_band": "31–40 min", "him_commute_band": "31–40 min", "rent_band": "£2,400–£2,800", "owner_occupier_band": "Med (30–60%)", "social_housing": "Med", "two_plus_grocers": false, "score": 40.8, "score_tier": "Weak fit (<50)", "status": "Compromise"}, {"area": "East Sheen", "postcode": "SW14", "region": "West", "nearest_station": "Mortlake", "walk_to_station_mins": 10, "her_kx_mins": 47, "her_changes": 2, "him_city_mins": 50, "him_changes": 2, "line_resilience": "Low", "backup_notes": "SWR from Mortlake; slow for both offices", "strike_resilience": "Good", "strike_backup": "SWR unaffected; onward to City still slow", "peak_crowding": "Comfortable", "night_tube": false, "cycling_her_to_kx_mins": 0, "cycling_him_to_city_mins": 0, "crime_rate_band": "Low", "drug_crime_band": "Low", "deprivation_band": "Low", "demographic_profile": "Established affluent", "area_trajectory": "Peaked", "hoodmaps_label": "Families", "owner_occupier_pct": 66, "community_housing_pct": 8, "night_safe": true, "period_garden_flat_u2800": false, "three_bed_u2800": true, "bike_storage": "Good", "indicative_rent": 2600, "council_tax_band_est": "High (>£2,400/yr)", "big_park": true, "cycling": 4, "flood_risk": "Low", "heathrow_noise": "Low", "amenity_score": 2, "quality_grocers_count": 1, "gym_access": 2, "fit_vs_east_putney": 2, "lat": 51.461, "lng": -0.278, "write_up": "Leafy, safe, and high owner-occupier but commute exceeds 45 min each way — too far for this couple's jobs.", "quick_verdict": "Great place to live; wrong place to commute from.", "both_u30": false, "her_commute_band": "41–50 min", "him_commute_band": "41–50 min", "rent_band": "£2,400–£2,800", "owner_occupier_band": "High (>60%)", "social_housing": "Low", "two_plus_grocers": false, "score": 39.7, "score_tier": "Weak fit (<50)", "status": "Compromise"}, {"area": "Hackney/London Fields", "postcode": "E8", "region": "NE", "nearest_station": "London Fields (Overground)", "walk_to_station_mins": 8, "her_kx_mins": 28, "her_changes": 1, "him_city_mins": 15, "him_changes": 0, "line_resilience": "Med", "backup_notes": "Overground to Liverpool St; buses to Highbury or Angel", "strike_resilience": "Med", "strike_backup": "Overground (National Rail-operated) to Liverpool St often unaffected by TfL strikes", "peak_crowding": "Moderate", "night_tube": false, "cycling_her_to_kx_mins": 35, "cycling_him_to_city_mins": 20, "crime_rate_band": "Med", "drug_crime_band": "Med", "deprivation_band": "Med", "demographic_profile": "Gentrifying", "area_trajectory": "Peaked", "hoodmaps_label": "Hipsters", "owner_occupier_pct": 28, "community_housing_pct": 28, "night_safe": true, "period_garden_flat_u2800": false, "three_bed_u2800": false, "bike_storage": "Good", "indicative_rent": 2700, "council_tax_band_est": "Med (£1,800–£2,400/yr)", "big_park": true, "cycling": 5, "flood_risk": "Low", "heathrow_noise": "None", "amenity_score": 5, "quality_grocers_count": 1, "gym_access": 4, "fit_vs_east_putney": 4, "lat": 51.542, "lng": -0.057, "write_up": "Him 15 min to City is exceptional; best restaurant and coffee scene east of Soho; but private gardens in budget are rare and it has outgrown its affordable roots.", "quick_verdict": "Move here if his City commute and lifestyle are top priority; accept no private garden.", "both_u30": true, "her_commute_band": "21–30 min", "him_commute_band": "≤20 min", "rent_band": "£2,400–£2,800", "owner_occupier_band": "Low (<30%)", "social_housing": "Med", "two_plus_grocers": false, "score": 39.4, "score_tier": "Weak fit (<50)", "status": "Compromise"}, {"area": "Angel/Islington", "postcode": "N1", "region": "North", "nearest_station": "Angel", "walk_to_station_mins": 5, "her_kx_mins": 20, "her_changes": 0, "him_city_mins": 10, "him_changes": 0, "line_resilience": "High", "backup_notes": "Northern line; dense bus network; cycling infrastructure", "strike_resilience": "Med", "strike_backup": "Buses 19, 38, 341 to City; cycling is realistic both ways on strike days", "peak_crowding": "Moderate", "night_tube": true, "cycling_her_to_kx_mins": 25, "cycling_him_to_city_mins": 15, "crime_rate_band": "Low", "drug_crime_band": "Low", "deprivation_band": "Low", "demographic_profile": "Established affluent", "area_trajectory": "Peaked", "hoodmaps_label": "Suits", "owner_occupier_pct": 34, "community_housing_pct": 18, "night_safe": true, "period_garden_flat_u2800": false, "three_bed_u2800": false, "bike_storage": "Hard", "indicative_rent": 2900, "council_tax_band_est": "Med (£1,800–£2,400/yr)", "big_park": false, "cycling": 5, "flood_risk": "Low", "heathrow_noise": "None", "amenity_score": 5, "quality_grocers_count": 2, "gym_access": 5, "fit_vs_east_putney": 4, "lat": 51.533, "lng": -0.106, "write_up": "His 10-min City commute is outstanding; world-class restaurants and gyms; but urban density means private gardens are essentially unavailable and bike storage is very hard.", "quick_verdict": "Move here if you can sacrifice garden and bike storage for the best urban lifestyle in London.", "both_u30": true, "her_commute_band": "≤20 min", "him_commute_band": "≤20 min", "rent_band": "Over £2,800", "owner_occupier_band": "Med (30–60%)", "social_housing": "Med", "two_plus_grocers": true, "score": 35.4, "score_tier": "Weak fit (<50)", "status": "Compromise"}, {"area": "Kensington/Holland Park", "postcode": "W8/W11", "region": "West", "nearest_station": "Holland Park", "walk_to_station_mins": 5, "her_kx_mins": 20, "her_changes": 1, "him_city_mins": 25, "him_changes": 1, "line_resilience": "High", "backup_notes": "Central + District + Circle; excellent bus network", "strike_resilience": "Med", "strike_backup": "Multiple bus routes; dense network provides good coverage", "peak_crowding": "Moderate", "night_tube": true, "cycling_her_to_kx_mins": 0, "cycling_him_to_city_mins": 0, "crime_rate_band": "Low", "drug_crime_band": "Low", "deprivation_band": "Low", "demographic_profile": "Established affluent", "area_trajectory": "Peaked", "hoodmaps_label": "Rich", "owner_occupier_pct": 52, "community_housing_pct": 14, "night_safe": true, "period_garden_flat_u2800": false, "three_bed_u2800": false, "bike_storage": "Hard", "indicative_rent": 3200, "council_tax_band_est": "High (>£2,400/yr)", "big_park": true, "cycling": 3, "flood_risk": "Low", "heathrow_noise": "None", "amenity_score": 5, "quality_grocers_count": 3, "gym_access": 5, "fit_vs_east_putney": 3, "lat": 51.506, "lng": -0.199, "write_up": "Superb commute times and world-class amenities but £3,200 for a 2-bed is well over budget; private gardens and bike storage near impossible at this price point.", "quick_verdict": "Aspirational but financially out of scope — revisit if budget increases to £3,500+.", "both_u30": true, "her_commute_band": "≤20 min", "him_commute_band": "21–30 min", "rent_band": "Over £2,800", "owner_occupier_band": "Med (30–60%)", "social_housing": "Low", "two_plus_grocers": true, "score": 34.1, "score_tier": "Weak fit (<50)", "status": "Compromise"}, {"area": "Battersea", "postcode": "SW11", "region": "SW/South", "nearest_station": "Battersea Power Station", "walk_to_station_mins": 8, "her_kx_mins": 28, "her_changes": 1, "him_city_mins": 20, "him_changes": 1, "line_resilience": "Med", "backup_notes": "Buses to Victoria; Clapham Jn 15 min walk", "strike_resilience": "Med", "strike_backup": "Clapham Junction (SWR) walkable; buses very frequent", "peak_crowding": "Comfortable", "night_tube": false, "cycling_her_to_kx_mins": 0, "cycling_him_to_city_mins": 0, "crime_rate_band": "Low", "drug_crime_band": "Low", "deprivation_band": "Low", "demographic_profile": "Established affluent", "area_trajectory": "Peaked", "hoodmaps_label": "Rich", "owner_occupier_pct": 36, "community_housing_pct": 20, "night_safe": true, "period_garden_flat_u2800": false, "three_bed_u2800": false, "bike_storage": "Hard", "indicative_rent": 2900, "council_tax_band_est": "Med (£1,800–£2,400/yr)", "big_park": true, "cycling": 4, "flood_risk": "Low", "heathrow_noise": "None", "amenity_score": 4, "quality_grocers_count": 2, "gym_access": 4, "fit_vs_east_putney": 4, "lat": 51.476, "lng": -0.158, "write_up": "Northern Line Extension gives good commutes but new-build dominance means private gardens are rare and bike storage is typically hard; over budget for most decent properties.", "quick_verdict": "Great if you're OK with purpose-built flat and no private garden; skip if garden is non-negotiable.", "both_u30": true, "her_commute_band": "21–30 min", "him_commute_band": "≤20 min", "rent_band": "Over £2,800", "owner_occupier_band": "Med (30–60%)", "social_housing": "Med", "two_plus_grocers": true, "score": 28.6, "score_tier": "Weak fit (<50)", "status": "Compromise"}, {"area": "Mortlake", "postcode": "SW14", "region": "West", "nearest_station": "Mortlake", "walk_to_station_mins": 8, "her_kx_mins": 43, "her_changes": 2, "him_city_mins": 47, "him_changes": 2, "line_resilience": "Low", "backup_notes": "SWR only; poor bus coverage", "strike_resilience": "Good", "strike_backup": "SWR to Waterloo unaffected; limited onward options though", "peak_crowding": "Comfortable", "night_tube": false, "cycling_her_to_kx_mins": 0, "cycling_him_to_city_mins": 0, "crime_rate_band": "Low", "drug_crime_band": "Low", "deprivation_band": "Low", "demographic_profile": "Established affluent", "area_trajectory": "Peaked", "hoodmaps_label": "Families", "owner_occupier_pct": 62, "community_housing_pct": 10, "night_safe": true, "period_garden_flat_u2800": false, "three_bed_u2800": false, "bike_storage": "Good", "indicative_rent": 2500, "council_tax_band_est": "High (>£2,400/yr)", "big_park": true, "cycling": 4, "flood_risk": "Med", "heathrow_noise": "Low", "amenity_score": 2, "quality_grocers_count": 1, "gym_access": 2, "fit_vs_east_putney": 2, "lat": 51.472, "lng": -0.262, "write_up": "Very pleasant river village with low crime, but 43+ min commutes with 2 changes each way — essentially a compromise.", "quick_verdict": "Fails the commute test; score reflects poor transit links.", "both_u30": false, "her_commute_band": "41–50 min", "him_commute_band": "41–50 min", "rent_band": "£2,400–£2,800", "owner_occupier_band": "High (>60%)", "social_housing": "Low", "two_plus_grocers": false, "score": 27.4, "score_tier": "Weak fit (<50)", "status": "Compromise"}, {"area": "Kew", "postcode": "TW9", "region": "West", "nearest_station": "Kew Gardens", "walk_to_station_mins": 8, "her_kx_mins": 45, "her_changes": 1, "him_city_mins": 48, "him_changes": 2, "line_resilience": "Med", "backup_notes": "District line + SWR at Kew Bridge", "strike_resilience": "Good", "strike_backup": "SWR at Kew Bridge (National Rail) unaffected by TfL strikes", "peak_crowding": "Comfortable", "night_tube": false, "cycling_her_to_kx_mins": 0, "cycling_him_to_city_mins": 0, "crime_rate_band": "Low", "drug_crime_band": "Low", "deprivation_band": "Low", "demographic_profile": "Established affluent", "area_trajectory": "Peaked", "hoodmaps_label": "Families", "owner_occupier_pct": 64, "community_housing_pct": 9, "night_safe": true, "period_garden_flat_u2800": false, "three_bed_u2800": false, "bike_storage": "Good", "indicative_rent": 2700, "council_tax_band_est": "High (>£2,400/yr)", "big_park": true, "cycling": 5, "flood_risk": "Med", "heathrow_noise": "Low", "amenity_score": 3, "quality_grocers_count": 1, "gym_access": 3, "fit_vs_east_putney": 2, "lat": 51.476, "lng": -0.284, "write_up": "Outstanding cycling and Kew Gardens next door, but 45 min commute each way with changes and some flood risk for ground-floor flats.", "quick_verdict": "Wonderful for weekends; the commute is a dealbreaker.", "both_u30": false, "her_commute_band": "41–50 min", "him_commute_band": "41–50 min", "rent_band": "£2,400–£2,800", "owner_occupier_band": "High (>60%)", "social_housing": "Low", "two_plus_grocers": false, "score": 25.3, "score_tier": "Weak fit (<50)", "status": "Compromise"}, {"area": "East Putney/Southfields", "postcode": "SW15", "region": "SW/South", "nearest_station": "East Putney / Southfields", "walk_to_station_mins": 8, "her_kx_mins": 32, "her_changes": 1, "him_city_mins": 38, "him_changes": 2, "line_resilience": "Low", "backup_notes": "Bus to Putney then SWR; very slow", "strike_resilience": "Poor", "strike_backup": "Bus to Putney station then SWR to Waterloo — but onward tube also affected", "peak_crowding": "Moderate", "night_tube": false, "cycling_her_to_kx_mins": 0, "cycling_him_to_city_mins": 0, "crime_rate_band": "Low", "drug_crime_band": "Low", "deprivation_band": "Low", "demographic_profile": "Established affluent", "area_trajectory": "Peaked", "hoodmaps_label": "Rich", "owner_occupier_pct": 52, "community_housing_pct": 14, "night_safe": true, "period_garden_flat_u2800": false, "three_bed_u2800": false, "bike_storage": "Good", "indicative_rent": 2700, "council_tax_band_est": "Med (£1,800–£2,400/yr)", "big_park": true, "cycling": 3, "flood_risk": "Low", "heathrow_noise": "None", "amenity_score": 3, "quality_grocers_count": 1, "gym_access": 3, "fit_vs_east_putney": 3, "lat": 51.461, "lng": -0.215, "write_up": "The benchmark: beautiful Victorian streets with private gardens but the District line commute is slow and unreliable for both offices — exactly why you're leaving.", "quick_verdict": "Stay only if you love the area unconditionally; move for anything better.", "both_u30": false, "her_commute_band": "31–40 min", "him_commute_band": "31–40 min", "rent_band": "£2,400–£2,800", "owner_occupier_band": "Med (30–60%)", "social_housing": "Low", "two_plus_grocers": false, "score": 24.3, "score_tier": "Weak fit (<50)", "status": "Benchmark"}, {"area": "Barnes", "postcode": "SW13", "region": "West", "nearest_station": "Barnes Bridge", "walk_to_station_mins": 10, "her_kx_mins": 42, "her_changes": 2, "him_city_mins": 45, "him_changes": 2, "line_resilience": "Low", "backup_notes": "SWR to Waterloo only; no tube", "strike_resilience": "Good", "strike_backup": "SWR (National Rail) unaffected by TfL tube strikes — good for both", "peak_crowding": "Comfortable", "night_tube": false, "cycling_her_to_kx_mins": 0, "cycling_him_to_city_mins": 0, "crime_rate_band": "Low", "drug_crime_band": "Low", "deprivation_band": "Low", "demographic_profile": "Established affluent", "area_trajectory": "Peaked", "hoodmaps_label": "Families", "owner_occupier_pct": 70, "community_housing_pct": 7, "night_safe": true, "period_garden_flat_u2800": false, "three_bed_u2800": false, "bike_storage": "Good", "indicative_rent": 2800, "council_tax_band_est": "High (>£2,400/yr)", "big_park": true, "cycling": 4, "flood_risk": "High", "heathrow_noise": "Low", "amenity_score": 3, "quality_grocers_count": 1, "gym_access": 3, "fit_vs_east_putney": 2, "lat": 51.488, "lng": -0.245, "write_up": "Idyllic riverside village with very low crime, but 42 min+ commutes for both, flood risk for garden flats, and over budget for period properties.", "quick_verdict": "Skip — flood risk + 42 min commute + over budget is a triple failure.", "both_u30": false, "her_commute_band": "41–50 min", "him_commute_band": "41–50 min", "rent_band": "£2,400–£2,800", "owner_occupier_band": "High (>60%)", "social_housing": "Low", "two_plus_grocers": false, "score": 24.3, "score_tier": "Weak fit (<50)", "status": "Compromise"}, {"area": "Richmond", "postcode": "TW9", "region": "West", "nearest_station": "Richmond", "walk_to_station_mins": 7, "her_kx_mins": 45, "her_changes": 1, "him_city_mins": 48, "him_changes": 2, "line_resilience": "Med", "backup_notes": "District line + SWR; Overground option", "strike_resilience": "Good", "strike_backup": "SWR to Waterloo unaffected; reasonable fallback", "peak_crowding": "Comfortable", "night_tube": false, "cycling_her_to_kx_mins": 0, "cycling_him_to_city_mins": 0, "crime_rate_band": "Low", "drug_crime_band": "Low", "deprivation_band": "Low", "demographic_profile": "Established affluent", "area_trajectory": "Peaked", "hoodmaps_label": "Rich", "owner_occupier_pct": 65, "community_housing_pct": 10, "night_safe": true, "period_garden_flat_u2800": false, "three_bed_u2800": false, "bike_storage": "Good", "indicative_rent": 2800, "council_tax_band_est": "High (>£2,400/yr)", "big_park": true, "cycling": 4, "flood_risk": "High", "heathrow_noise": "Low", "amenity_score": 4, "quality_grocers_count": 2, "gym_access": 3, "fit_vs_east_putney": 2, "lat": 51.463, "lng": -0.301, "write_up": "Richmond Park and the river are exceptional but 45 min+ to KX, 48 min to City, high flood risk for garden flats, and at the top of budget.", "quick_verdict": "Beautiful but fails on commute and flood risk — a compromise at best.", "both_u30": false, "her_commute_band": "41–50 min", "him_commute_band": "41–50 min", "rent_band": "£2,400–£2,800", "owner_occupier_band": "High (>60%)", "social_housing": "Low", "two_plus_grocers": true, "score": 24.3, "score_tier": "Weak fit (<50)", "status": "Compromise"}, {"area": "Putney", "postcode": "SW15", "region": "SW/South", "nearest_station": "Putney", "walk_to_station_mins": 7, "her_kx_mins": 35, "her_changes": 1, "him_city_mins": 40, "him_changes": 2, "line_resilience": "Low", "backup_notes": "SWR to Waterloo then tube, but slow for City", "strike_resilience": "Poor", "strike_backup": "SWR to Waterloo unaffected but onward tube struck", "peak_crowding": "Moderate", "night_tube": false, "cycling_her_to_kx_mins": 0, "cycling_him_to_city_mins": 0, "crime_rate_band": "Low", "drug_crime_band": "Low", "deprivation_band": "Low", "demographic_profile": "Established affluent", "area_trajectory": "Peaked", "hoodmaps_label": "Rich", "owner_occupier_pct": 54, "community_housing_pct": 12, "night_safe": true, "period_garden_flat_u2800": false, "three_bed_u2800": false, "bike_storage": "Good", "indicative_rent": 2800, "council_tax_band_est": "Med (£1,800–£2,400/yr)", "big_park": true, "cycling": 3, "flood_risk": "Low", "heathrow_noise": "None", "amenity_score": 4, "quality_grocers_count": 2, "gym_access": 3, "fit_vs_east_putney": 3, "lat": 51.468, "lng": -0.216, "write_up": "Lovely high street and river walk but same District line pain as East Putney and at the top of budget.", "quick_verdict": "Skip — same commute problem, higher rent, no garden flat under budget.", "both_u30": false, "her_commute_band": "31–40 min", "him_commute_band": "31–40 min", "rent_band": "£2,400–£2,800", "owner_occupier_band": "Med (30–60%)", "social_housing": "Low", "two_plus_grocers": true, "score": 23.3, "score_tier": "Weak fit (<50)", "status": "Compromise"}, {"area": "Fulham/Parsons Green", "postcode": "SW6", "region": "West", "nearest_station": "Parsons Green", "walk_to_station_mins": 5, "her_kx_mins": 28, "her_changes": 1, "him_city_mins": 32, "him_changes": 1, "line_resilience": "Med", "backup_notes": "District line; bus to Earl's Court for Piccadilly", "strike_resilience": "Med", "strike_backup": "Buses to Clapham Jn for SWR; frequent bus network", "peak_crowding": "Moderate", "night_tube": false, "cycling_her_to_kx_mins": 0, "cycling_him_to_city_mins": 0, "crime_rate_band": "Low", "drug_crime_band": "Low", "deprivation_band": "Low", "demographic_profile": "Established affluent", "area_trajectory": "Peaked", "hoodmaps_label": "Rich", "owner_occupier_pct": 48, "community_housing_pct": 14, "night_safe": true, "period_garden_flat_u2800": false, "three_bed_u2800": false, "bike_storage": "Good", "indicative_rent": 2900, "council_tax_band_est": "High (>£2,400/yr)", "big_park": false, "cycling": 3, "flood_risk": "Low", "heathrow_noise": "None", "amenity_score": 4, "quality_grocers_count": 2, "gym_access": 4, "fit_vs_east_putney": 4, "lat": 51.474, "lng": -0.2, "write_up": "Attractive Victorian streets and upscale village feel but over budget, no private gardens in range, and his City commute is 32 min via District+change.", "quick_verdict": "Skip — beautiful area but over budget and commute is indirect.", "both_u30": false, "her_commute_band": "21–30 min", "him_commute_band": "31–40 min", "rent_band": "Over £2,800", "owner_occupier_band": "Med (30–60%)", "social_housing": "Low", "two_plus_grocers": true, "score": 23.3, "score_tier": "Weak fit (<50)", "status": "Compromise"}, {"area": "Chiswick/Bedford Park", "postcode": "W4", "region": "West", "nearest_station": "Gunnersbury / Turnham Green", "walk_to_station_mins": 8, "her_kx_mins": 32, "her_changes": 1, "him_city_mins": 38, "him_changes": 2, "line_resilience": "Med", "backup_notes": "District line; SWR at Chiswick station", "strike_resilience": "Med", "strike_backup": "SWR at Chiswick station (National Rail) to Waterloo", "peak_crowding": "Comfortable", "night_tube": false, "cycling_her_to_kx_mins": 0, "cycling_him_to_city_mins": 0, "crime_rate_band": "Low", "drug_crime_band": "Low", "deprivation_band": "Low", "demographic_profile": "Established affluent", "area_trajectory": "Peaked", "hoodmaps_label": "Families", "owner_occupier_pct": 58, "community_housing_pct": 12, "night_safe": true, "period_garden_flat_u2800": false, "three_bed_u2800": false, "bike_storage": "Good", "indicative_rent": 2800, "council_tax_band_est": "High (>£2,400/yr)", "big_park": true, "cycling": 4, "flood_risk": "Low", "heathrow_noise": "High", "amenity_score": 4, "quality_grocers_count": 2, "gym_access": 3, "fit_vs_east_putney": 3, "lat": 51.494, "lng": -0.262, "write_up": "Extraordinarily pretty Bedford Park conservation area but Heathrow noise is severe every 90 seconds; over budget for garden flats; commute to City is indirect.", "quick_verdict": "Skip — Heathrow noise ruins the garden dream and commute to City is weak.", "both_u30": false, "her_commute_band": "31–40 min", "him_commute_band": "31–40 min", "rent_band": "£2,400–£2,800", "owner_occupier_band": "Med (30–60%)", "social_housing": "Low", "two_plus_grocers": true, "score": 23.3, "score_tier": "Weak fit (<50)", "status": "Compromise"}];
+
+let weights = {commute:35, garden:20, bike:15, space:15, rent:15};
+let filters = {
+  bothU30: false, region:'All',
+  herBand:'Any', himBand:'Any',
+  lineRes:'Any', strikeRes:'Any',
+  crowding:'Any', nightTube: false,
+  crime:'Any', drugCrime:'Any', socialHousing:'Any',
+  floodRisk:'Any', heathrowNoise:'Any',
+  periodGarden:false, threeBed:false,
+  bikeStorage:'Any', maxRent:3000,
+  status:'All', trajectory:'Any',
+  gymAccess:'Any', twoGrocers:false, bigPark:false,
+};
+
+let selectedArea = null;
+let sortCol = 'score';
+let sortAsc = false;
+let map = null;
+let markers = {};
+let computedAreas = [];
+let filteredIds = new Set();
+
+function computeScore(a, w) {
+  const norm = Object.values(w).reduce((s,v)=>s+v,0);
+  const wn = Object.fromEntries(Object.entries(w).map(([k,v])=>[k,v/norm]));
+  const base = a.both_u30 ? 50 : 0;
+  const herPts = Math.max(0, 25 - Math.max(0, a.her_kx_mins - 20)*2.5);
+  const himPts = Math.max(0, 25 - Math.max(0, a.him_city_mins - 20)*2.5);
+  const timePts = herPts*0.6 + himPts*0.4;
+  const changePen = (a.her_changes + a.him_changes)*5;
+  const resBon = {High:10,Med:5,Low:0}[a.line_resilience]||0;
+  const cs = Math.max(0,Math.min(100,base+timePts-changePen+resBon))/100;
+  const gs = a.period_garden_flat_u2800?1:0;
+  const bs = {Good:1,OK:.5,Hard:0}[a.bike_storage]||0;
+  const ss = a.three_bed_u2800?1:0;
+  const rs = Math.max(0,Math.min(1,(2800-a.indicative_rent)/1200));
+  const variable = 82*(wn.commute*cs + wn.garden*gs + wn.bike*bs + wn.space*ss + wn.rent*rs);
+  let bonus=0;
+  bonus += a.crime_rate_band==='Low'?3:(a.crime_rate_band==='Med'?1:0);
+  bonus += a.drug_crime_band==='Low'?2:0;
+  bonus += a.social_housing==='Low'?2:0;
+  bonus += a.big_park?2:0;
+  bonus += a.gym_access>=4?2:0;
+  bonus += a.strike_resilience==='Good'?2:0;
+  bonus += a.flood_risk==='Low'?1:0;
+  bonus += a.heathrow_noise==='None'?1:0;
+  bonus += a.night_tube?1:0;
+  bonus += a.cycling>=4?1:0;
+  bonus = Math.min(18,bonus);
+  return Math.round(Math.min(100,Math.max(0,variable+bonus))*10)/10;
+}
+
+function applyFilters(areas) {
+  return areas.filter(a => {
+    if(filters.bothU30 && !a.both_u30) return false;
+    if(filters.region!=='All' && a.region!==filters.region) return false;
+    if(filters.herBand!=='Any' && a.her_commute_band!==filters.herBand) return false;
+    if(filters.himBand!=='Any' && a.him_commute_band!==filters.himBand) return false;
+    if(filters.lineRes!=='Any' && a.line_resilience!==filters.lineRes) return false;
+    if(filters.strikeRes!=='Any' && a.strike_resilience!==filters.strikeRes) return false;
+    if(filters.crowding!=='Any' && a.peak_crowding!==filters.crowding) return false;
+    if(filters.nightTube && !a.night_tube) return false;
+    if(filters.crime!=='Any' && a.crime_rate_band!==filters.crime) return false;
+    if(filters.drugCrime!=='Any' && a.drug_crime_band!==filters.drugCrime) return false;
+    if(filters.socialHousing!=='Any' && a.social_housing!==filters.socialHousing) return false;
+    if(filters.floodRisk!=='Any' && a.flood_risk!==filters.floodRisk) return false;
+    if(filters.heathrowNoise!=='Any' && a.heathrow_noise!==filters.heathrowNoise) return false;
+    if(filters.periodGarden && !a.period_garden_flat_u2800) return false;
+    if(filters.threeBed && !a.three_bed_u2800) return false;
+    if(filters.bikeStorage!=='Any' && a.bike_storage!==filters.bikeStorage) return false;
+    if(a.indicative_rent > filters.maxRent) return false;
+    if(filters.status!=='All' && a.status!==filters.status) return false;
+    if(filters.trajectory!=='Any' && a.area_trajectory!==filters.trajectory) return false;
+    if(filters.gymAccess!=='Any'){
+      const mn=parseInt(filters.gymAccess);
+      if(a.gym_access<mn) return false;
+    }
+    if(filters.twoGrocers && !a.two_plus_grocers) return false;
+    if(filters.bigPark && !a.big_park) return false;
+    return true;
+  });
+}
+
+function scoreColor(score) {
+  if(score>=70) return '#7B9E87';
+  if(score>=55) return '#D4933A';
+  return '#C4614A';
+}
+
+function fmtMins(m) {
+  return m + ' min';
+}
+
+function fmtChanges(n) {
+  return n === 0 ? 'direct' : n + ' chg';
+}
+
+function selectArea(areaName) {
+  selectedArea = areaName;
+  renderWriteup();
+  renderTable();
+  updateMapSelection();
+}
+
+function renderWriteup() {
+  if (!selectedArea) return;
+  const a = computedAreas.find(x => x.area === selectedArea);
+  if (!a) return;
+
+  const sc = a.score;
+  const col = scoreColor(sc);
+
+  const both = a.both_u30
+    ? '<span class="ok">&#10003;</span>'
+    : '<span class="no">&#10007;</span>';
+
+  const html = `
+    <div class="writeup-header">
+      <div class="writeup-title playfair">${a.area}</div>
+      <div class="score-pill" style="background:${col}">${sc}</div>
+      <div class="status-badge ${a.status}">${a.status}</div>
+    </div>
+    <div class="writeup-meta">
+      <span>&#128205; ${a.postcode}</span>
+      <span>&#127758; ${a.region}</span>
+      <span>&#127968; ${a.hoodmaps_label}</span>
+    </div>
+    <div class="writeup-commute">
+      <strong>Her &rarr; KX:</strong> ${fmtMins(a.her_kx_mins)} (${fmtChanges(a.her_changes)})
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      <strong>Him &rarr; City:</strong> ${fmtMins(a.him_city_mins)} (${fmtChanges(a.him_changes)})
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      <strong>Both &le;30:</strong> ${both}
+    </div>
+    <div class="writeup-strike">
+      &#9889; <strong>Resilience:</strong> ${a.line_resilience} &mdash; ${a.strike_backup || 'N/A'}
+    </div>
+    <div class="facts-grid">
+      <div class="fact-card">
+        <div class="fact-val">&pound;${a.indicative_rent.toLocaleString()}</div>
+        <div class="fact-lbl">Indicative Rent</div>
+      </div>
+      <div class="fact-card">
+        <div class="fact-val">${a.flood_risk}</div>
+        <div class="fact-lbl">Flood Risk</div>
+      </div>
+      <div class="fact-card">
+        <div class="fact-val">${a.heathrow_noise}</div>
+        <div class="fact-lbl">Heathrow Noise</div>
+      </div>
+      <div class="fact-card">
+        <div class="fact-val">${a.cycling}/5</div>
+        <div class="fact-lbl">Bike Score</div>
+      </div>
+      <div class="fact-card">
+        <div class="fact-val">${a.period_garden_flat_u2800 ? '&#10003;' : '&#10007;'}</div>
+        <div class="fact-lbl">Period Garden Flat</div>
+      </div>
+      <div class="fact-card">
+        <div class="fact-val">${a.three_bed_u2800 ? '&#10003;' : '&#10007;'}</div>
+        <div class="fact-lbl">3-Bed &le;&pound;2,800</div>
+      </div>
+    </div>
+    <div class="demographics-row">
+      <div class="demo-chip">Crime: ${a.crime_rate_band}</div>
+      <div class="demo-chip">Drug crime: ${a.drug_crime_band}</div>
+      <div class="demo-chip">Social housing: ${a.social_housing}</div>
+      <div class="demo-chip">Trajectory: ${a.area_trajectory}</div>
+    </div>
+    <div class="writeup-text">${a.write_up || ''}</div>
+    <div class="quick-verdict">${a.quick_verdict || ''}</div>
+  `;
+
+  document.getElementById('writeupInner').innerHTML = html;
+  const panel = document.getElementById('writeupPanel');
+  panel.classList.add('open');
+  panel.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+}
+
+function updateWeightBars() {
+  const keys = ['commute','garden','bike','space','rent'];
+  const total = keys.reduce((s,k) => s + weights[k], 0) || 1;
+  keys.forEach(k => {
+    const el = document.getElementById('wb-' + k);
+    if (el) el.style.width = (weights[k]/total*100) + '%';
+  });
+}
+
+function recalcAll() {
+  // Recompute scores
+  computedAreas = AREAS_DATA.map(a => {
+    const copy = Object.assign({}, a);
+    copy.score = computeScore(a, weights);
+    return copy;
+  });
+
+  // Apply filters
+  const filtered = applyFilters(computedAreas);
+  filteredIds = new Set(filtered.map(a => a.area));
+
+  // Sort
+  const sorted = [...computedAreas].sort((a,b) => {
+    let va = a[sortCol], vb = b[sortCol];
+    if (typeof va === 'boolean') { va = va ? 1 : 0; vb = vb ? 1 : 0; }
+    if (typeof va === 'string') { va = va.toLowerCase(); vb = vb.toLowerCase(); }
+    if (va < vb) return sortAsc ? -1 : 1;
+    if (va > vb) return sortAsc ? 1 : -1;
+    return 0;
+  });
+
+  // Assign ranks based on score desc (score rank, not sort rank)
+  const scoreRanked = [...computedAreas].sort((a,b) => b.score - a.score);
+  const rankMap = {};
+  scoreRanked.forEach((a, i) => rankMap[a.area] = i + 1);
+
+  renderTable(sorted, rankMap);
+  updateStats(filtered);
+  updateMapMarkers();
+}
+
+function updateStats(filtered) {
+  const n = filtered.length;
+  const top = [...filtered].sort((a,b) => b.score - a.score)[0];
+  const bar = document.getElementById('statsBar');
+  if (top) {
+    bar.innerHTML = `Showing <strong>${n}</strong> of <strong>65</strong> areas &nbsp;&middot;&nbsp; Top pick: <strong>${top.area}</strong> (<strong>${top.score}</strong>)`;
+  } else {
+    bar.innerHTML = `Showing <strong>0</strong> of <strong>65</strong> areas &mdash; no areas match current filters`;
+  }
+}
+
+function renderTable(sorted, rankMap) {
+  if (!sorted) {
+    sorted = computedAreas;
+    rankMap = {};
+    const sr = [...computedAreas].sort((a,b) => b.score - a.score);
+    sr.forEach((a,i) => rankMap[a.area] = i+1);
+  }
+
+  const tbody = document.getElementById('tableBody');
+  let html = '';
+
+  sorted.forEach(a => {
+    const inFilter = filteredIds.has(a.area);
+    const rank = rankMap[a.area] || '-';
+    const sc = a.score;
+    const col = scoreColor(sc);
+    const rowClass = [
+      a.status === 'Benchmark' ? 'row-benchmark' : (a.status === 'Contender' ? 'row-contender' : ''),
+      a.area === selectedArea ? 'selected' : '',
+      !inFilter ? 'filtered-out' : ''
+    ].filter(Boolean).join(' ');
+
+    const opacity = inFilter ? '' : 'opacity:0.35;';
+    const both = a.both_u30
+      ? '<span class="ok-tick">&#10003;</span>'
+      : '<span class="no-tick">&#10007;</span>';
+
+    html += `<tr class="${rowClass}" style="${opacity}" data-area="${escHtml(a.area)}" onclick="selectArea(this.dataset.area)">
+      <td class="rank-cell">${rank}</td>
+      <td><strong>${escHtml(a.area)}</strong></td>
+      <td><span class="score-pill" style="background:${col};padding:2px 8px;border-radius:12px;color:white;font-size:0.8rem;font-weight:700;">${sc}</span></td>
+      <td><span class="status-badge ${a.status}" style="font-size:0.7rem;">${a.status}</span></td>
+      <td>${escHtml(a.region)}</td>
+      <td>${both}</td>
+      <td>${a.her_kx_mins} min</td>
+      <td>${a.him_city_mins} min</td>
+      <td>${escHtml(a.strike_resilience)}</td>
+      <td>${a.period_garden_flat_u2800 ? '<span class="ok-tick">&#10003;</span>' : '<span class="no-tick">&#10007;</span>'}</td>
+      <td>${a.three_bed_u2800 ? '<span class="ok-tick">&#10003;</span>' : '<span class="no-tick">&#10007;</span>'}</td>
+      <td>${a.cycling}/5</td>
+      <td>&pound;${a.indicative_rent.toLocaleString()}</td>
+      <td>${escHtml(a.crime_rate_band)}</td>
+      <td>${escHtml(a.heathrow_noise)}</td>
+      <td>${escHtml(a.area_trajectory)}</td>
+    </tr>`;
+  });
+
+  tbody.innerHTML = html;
+
+  // Update header sort indicators
+  document.querySelectorAll('thead th').forEach(th => {
+    const col = th.dataset.col;
+    th.classList.toggle('sort-active', col === sortCol);
+    const arrow = col === sortCol ? (sortAsc ? ' &#9650;' : ' &#9660;') : '';
+    th.innerHTML = th.textContent.replace(/ [▲▼]$/,'') + arrow;
+  });
+}
+
+function escHtml(s) {
+  if (s == null) return '';
+  return String(s)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
+}
+
+function updateMapMarkers() {
+  if (!map) return;
+  AREAS_DATA.forEach(a => {
+    const marker = markers[a.area];
+    if (!marker) return;
+    const computed = computedAreas.find(x => x.area === a.area);
+    const sc = computed ? computed.score : a.score;
+    const inFilter = filteredIds.has(a.area);
+    const col = scoreColor(sc);
+    const isSelected = a.area === selectedArea;
+    const radius = a.status === 'Benchmark' ? 12 : 8;
+
+    marker.setStyle({
+      fillColor: col,
+      color: isSelected ? '#1A2744' : 'white',
+      weight: isSelected ? 3 : 1.5,
+      fillOpacity: inFilter ? 0.85 : 0.12,
+      opacity: inFilter ? 1 : 0.25,
+      radius: radius,
+    });
+  });
+}
+
+function updateMapSelection() {
+  if (!map) return;
+  const a = computedAreas.find(x => x.area === selectedArea);
+  if (!a) return;
+  const marker = markers[a.area];
+  if (!marker) return;
+  map.panTo([a.lat, a.lng], {animate: true, duration: 0.5});
+  marker.openPopup();
+  updateMapMarkers();
+}
+
+function initMap() {
+  map = L.map('map', {
+    center: [51.505, -0.09],
+    zoom: 11,
+    zoomControl: true,
+  });
+
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    subdomains: 'abcd',
+    maxZoom: 19,
+  }).addTo(map);
+
+  // Workplace star markers
+  const starIcon = (label) => L.divIcon({
+    html: `<div style="font-size:22px;line-height:1;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.4));">&#11088;</div><div style="font-size:10px;font-weight:600;background:rgba(255,255,255,0.92);padding:2px 5px;border-radius:4px;white-space:nowrap;margin-top:2px;color:#1A2744;">${label}</div>`,
+    className: '',
+    iconAnchor: [11, 11],
+  });
+
+  L.marker([51.5308, -0.1238], {icon: starIcon('Her office: King's Cross')})
+    .addTo(map)
+    .bindPopup('<strong>Her office: King's Cross</strong>');
+
+  L.marker([51.5175, -0.0886], {icon: starIcon('His office: City')})
+    .addTo(map)
+    .bindPopup('<strong>His office: City/Moorgate</strong>');
+
+  // Area markers
+  AREAS_DATA.forEach(a => {
+    const sc = a.score;
+    const col = scoreColor(sc);
+    const radius = a.status === 'Benchmark' ? 12 : 8;
+
+    const marker = L.circleMarker([a.lat, a.lng], {
+      radius: radius,
+      fillColor: col,
+      color: 'white',
+      weight: 1.5,
+      fillOpacity: 0.85,
+      opacity: 1,
+    }).addTo(map);
+
+    marker.bindPopup(`
+      <strong style="font-family:'Playfair Display',serif;font-size:1rem;">${escHtml(a.area)}</strong><br>
+      <span style="font-size:0.8rem;color:#6B6B6B;">${escHtml(a.postcode)} &middot; ${escHtml(a.region)}</span><br>
+      <span style="font-size:0.85rem;">Score: <strong style="color:${col}">${sc}</strong></span><br>
+      <span style="font-size:0.8rem;">Her&rarr;KX: ${a.her_kx_mins}min | Him&rarr;City: ${a.him_city_mins}min</span>
+    `);
+
+    marker.on('click', () => selectArea(a.area));
+    markers[a.area] = marker;
+  });
+}
+
+function initControls() {
+  // Weight sliders
+  ['commute','garden','bike','space','rent'].forEach(k => {
+    const sl = document.getElementById('sl-' + k);
+    const sv = document.getElementById('sv-' + k);
+    sl.addEventListener('input', () => {
+      weights[k] = parseInt(sl.value);
+      sv.textContent = weights[k] + '%';
+      updateWeightBars();
+      recalcAll();
+    });
+  });
+
+  // Filter controls
+  const filterMap = [
+    ['f-bothU30', 'bothU30', 'checkbox'],
+    ['f-herBand', 'herBand', 'select'],
+    ['f-himBand', 'himBand', 'select'],
+    ['f-lineRes', 'lineRes', 'select'],
+    ['f-strikeRes', 'strikeRes', 'select'],
+    ['f-crowding', 'crowding', 'select'],
+    ['f-nightTube', 'nightTube', 'checkbox'],
+    ['f-crime', 'crime', 'select'],
+    ['f-drugCrime', 'drugCrime', 'select'],
+    ['f-socialHousing', 'socialHousing', 'select'],
+    ['f-floodRisk', 'floodRisk', 'select'],
+    ['f-heathrowNoise', 'heathrowNoise', 'select'],
+    ['f-trajectory', 'trajectory', 'select'],
+    ['f-periodGarden', 'periodGarden', 'checkbox'],
+    ['f-threeBed', 'threeBed', 'checkbox'],
+    ['f-bikeStorage', 'bikeStorage', 'select'],
+    ['f-gymAccess', 'gymAccess', 'select'],
+    ['f-twoGrocers', 'twoGrocers', 'checkbox'],
+    ['f-bigPark', 'bigPark', 'checkbox'],
+    ['f-status', 'status', 'select'],
+    ['f-region', 'region', 'select'],
+  ];
+
+  filterMap.forEach(([id, key, type]) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('change', () => {
+      if (type === 'checkbox') {
+        filters[key] = el.checked;
+      } else {
+        filters[key] = el.value;
+      }
+      recalcAll();
+    });
+  });
+
+  // Rent slider
+  const rentSl = document.getElementById('f-maxRent');
+  const rentLbl = document.getElementById('rentValLabel');
+  rentSl.addEventListener('input', () => {
+    filters.maxRent = parseInt(rentSl.value);
+    rentLbl.textContent = 'Max: £' + parseInt(rentSl.value).toLocaleString();
+    recalcAll();
+  });
+
+  // Table header sort
+  document.querySelectorAll('thead th').forEach(th => {
+    th.addEventListener('click', () => {
+      const col = th.dataset.col;
+      if (!col) return;
+      if (sortCol === col) {
+        sortAsc = !sortAsc;
+      } else {
+        sortCol = col;
+        sortAsc = col !== 'score';
+      }
+      recalcAll();
+    });
+  });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  computedAreas = AREAS_DATA.map(a => Object.assign({}, a));
+  filteredIds = new Set(computedAreas.map(a => a.area));
+  updateWeightBars();
+  initMap();
+  initControls();
+  recalcAll();
+});
+</script>
+</body>
+</html>
